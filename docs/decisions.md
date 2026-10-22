@@ -9,6 +9,7 @@
 3. 项目不保存具体渠道链接，不依赖某个指定分发渠道。
 4. 新项目位于 `dev/github/geckoview-lite-runtime`，同步创建 GitHub 公开仓库。
 5. 本阶段先产出方案。
+6. Crash reporter 也属于可移除的功能。
 
 ## 本方案采用的默认选择
 
@@ -19,6 +20,7 @@
 | 产品形态 | 可嵌入 Android View 的运行时 SDK | 延续 GeckoView 使用方式，先减少底层改动 |
 | 接入模式 | 默认 bundled；external 为可选构建依赖 | 不启用动态化时不引入安装器、升级状态机和包来源接口 |
 | 裁剪配置 | 默认 compat-lite；content-lite 需要主动选择 | 未获得具体网站清单前，避免默认删除常用 Web 能力 |
+| Crash reporter | 独立构建选项，默认保留但允许移除，适用于两种配置与两种接入模式 | 用户要求加入可移除清单；启动健康检查与恢复不能依赖 reporter |
 | 发布 ABI | 首期 arm64-v8a；x86_64 用于测试 | 先控制构建与验证组合，其他 ABI 后续扩展 |
 | Android 范围 | 首期 API 26 起；targetSdk 跟随锁定上游与接入方要求 | 调研修订默认 minSdk=26、targetSdk=37，不擅自降低上游支持下限 |
 | 动态边界 | V1 外置 native 与 Gecko 资源；Java、Android res、Manifest 留在宿主 | 降低类加载、资源 ID 和 Android 服务注册的复杂度 |

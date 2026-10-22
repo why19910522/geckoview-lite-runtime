@@ -26,6 +26,7 @@
 | S12 | [package-manifest.in](https://github.com/mozilla-firefox/firefox/blob/d6fd7a4e69b3c2d4550582eb38d2cdbd9cbad79a/mobile/android/installer/package-manifest.in#L97) | 包清单包含扩展注册和 PDF.js 资源 | 删除 PDF/扩展涉及注册、资源和依赖，不能直接从 ZIP 中删文件后宣称兼容 |
 | S13 | [android-sdk.configure](https://github.com/mozilla-firefox/firefox/blob/d6fd7a4e69b3c2d4550582eb38d2cdbd9cbad79a/build/moz.configure/android-sdk.configure#L155) | 此修订默认 minSdk=26、targetSdk=37 | 首期沿用支持下限；实施时重新检查所选生产修订和工具链 |
 | S14 | [GeckoRuntime.java](https://github.com/mozilla-firefox/firefox/blob/d6fd7a4e69b3c2d4550582eb38d2cdbd9cbad79a/mobile/android/geckoview/src/main/java/org/mozilla/geckoview/GeckoRuntime.java#L694) | Runtime 创建经过 init；shutdown 使已关联 Session 失效 | 设计不能将关闭 Session 或 shutdown 视为可安全卸载并重载 native 的契约 |
+| S15 | [toolkit/moz.configure：Crash reporter](https://github.com/mozilla-firefox/firefox/blob/d6fd7a4e69b3c2d4550582eb38d2cdbd9cbad79a/toolkit/moz.configure#L3499) | 存在 `--enable-crashreporter` 布尔配置并生成 `MOZ_CRASHREPORTER`；默认值受目标与开发构建条件影响 | 将对应的 `--disable-crashreporter` 列为编译裁剪入口；Android 服务、回调和资源是否随之排除需要依赖分析和构建验证，不能拿开发构建默认未启用的结果冒充 release 裁剪收益 |
 
 表中“影响”是工程推论，不是上游保证的外置装载 API。
 
@@ -48,5 +49,6 @@
 4. 本机可用的完整 Gecko Android 构建环境、首轮构建成本及稳定版生产修订。
 5. 各裁剪项在 Android 上的有效性、实际减少体积、页面能力损失和链接期依赖。
 6. 同 bridge 兼容更新允许哪些源码变动，生成 BuildConfig、JNI 或 service 契约是否改变；未经配对测试不能推导兼容。
+7. 禁用 Crash reporter 后，crashhelper 服务、native 依赖、Java/JNI 回调及打包资源的实际残留；无 reporter 产物的启动失败检测与恢复是否仍独立可用。
 
 未运行这些验证之前，只能说方案已定位入口，不能说已经支持动态加载、已经缩小体积或已经完成平台适配。
