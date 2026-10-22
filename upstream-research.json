@@ -1,0 +1,13 @@
+{
+  "repository": "https://github.com/mozilla-firefox/firefox.git",
+  "revision": "d6fd7a4e69b3c2d4550582eb38d2cdbd9cbad79a",
+  "revisionCommittedAt": "2026-10-22T04:03:27Z",
+  "reviewedOn": "2026-10-22",
+  "purpose": "source-research-and-prototype-candidate",
+  "buildVerified": false,
+  "productionBaselineSelected": false,
+  "observedAndroidDefaults": {
+    "minSdk": 26,
+    "targetSdk": 37
+  }
+}

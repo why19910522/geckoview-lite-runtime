@@ -1,0 +1,13 @@
+.DS_Store
+.idea/
+.gradle/
+local.properties
+upstream/
+out/
+artifacts/
+*.jks
+*.keystore
+*.p12
+*.pem
+.env
+.env.*
