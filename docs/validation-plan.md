@@ -37,7 +37,8 @@ M0 建议每个条件至少 30 次启动，报告中位数与 P95、分布和失
 
 | 维度 | 首期必测 |
 | --- | --- |
-| Android | API 26 下限、API 34 动态代码约束环境、API 35 的 4 KB/16 KB 环境、锁定 targetSdk 对应系统；同一环境可覆盖多个条件 |
+| Android | API 26 下限、API 30、API 34、API 35 的 4 KB/16 KB 环境、锁定上游默认 target 对应系统；宿主 target 与设备 API 分开记录，同一环境可覆盖多个条件 |
+| 宿主 targetSdk | target 30 适配宿主与上游默认 target 参考宿主分别验证；compileSdk 保持上游要求。核对最终 Manifest/APK，不以 AAR 声明代替实际值 |
 | ABI | arm64-v8a 发布；x86_64 测试。不用 x86_64 结果替代 arm64 实机验证 |
 | 设备 | 一台有代表性的低内存设备与一台主流设备；16 KB 环境另行验证 |
 | 模式 | bundled、external；静态包中不引入 external 依赖 |
@@ -47,6 +48,8 @@ M0 建议每个条件至少 30 次启动，报告中位数与 P95、分布和失
 | 装载链 | 首次 mozglue、NSS/SQLite、XUL、JNI、动态依赖、linker namespace、错误 ABI 与缺库 |
 
 16 KB 测试需要记录实际 page size、检查每个 ELF 的 segment 对齐，并验证打包后的实际加载。不能只验证链接器参数或只看包能解压。
+
+target 30 宿主必须覆盖 API 30 与较新系统上的静态/外置模式、权限、存储、服务启动、进程绑定和 native 加载。target 条件触发的系统行为按实际宿主值判断，例如高 target 专属的动态代码限制不能错误地当作 target 30 的同一触发条件；SDK 自身仍保持签名验证、只读不可变安装和完整性要求。降低 target 不免除所有应用均受影响的平台变化，也不免除 16 KB 适配。对比 target 30 与上游默认 target 时，其余输入保持一致并单独报告差异，不能将兼容行为变化误算为裁剪收益。
 
 ## 4. 页面与嵌入行为
 
