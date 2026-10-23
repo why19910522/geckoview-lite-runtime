@@ -1,6 +1,6 @@
 # 上游源码调研与证据
 
-核查日期：2026-10-22。只完成源码与官方文档阅读，没有完整检出、构建或运行 Gecko。
+首次核查：2026-10-22。补充核查：2026-10-23。只完成源码与官方文档阅读，没有完整检出、构建或运行 Gecko。
 
 ## 调研输入
 
@@ -20,11 +20,11 @@
 | S6 | [GeckoServiceChildProcess.java](https://github.com/mozilla-firefox/firefox/blob/d6fd7a4e69b3c2d4550582eb38d2cdbd9cbad79a/mobile/android/geckoview/src/main/java/org/mozilla/gecko/process/GeckoServiceChildProcess.java#L53) | `onCreate` 启动 GeckoThread；Binder start 构造 InitInfo；不支持复用已启动进程 | 子进程需在首次 native 装载前拿到所选核心，不能动态重用旧进程加载新包 |
 | S7 | [AndroidManifest_overlay.jinja](https://github.com/mozilla-firefox/firefox/blob/d6fd7a4e69b3c2d4550582eb38d2cdbd9cbad79a/mobile/android/geckoview/src/main/AndroidManifest_overlay.jinja#L14) | 含 crashhelper、media、socket、GPU、RDD、utility 和普通/isolated/zygote content 服务声明 | 服务声明及生成类随宿主固定，版本握手须覆盖各类实际进程 |
 | S8 | [ZygotePreload.java](https://github.com/mozilla-firefox/firefox/blob/d6fd7a4e69b3c2d4550582eb38d2cdbd9cbad79a/mobile/android/geckoview/src/main/java/org/mozilla/gecko/process/ZygotePreload.java#L17) | zygote preload 直接调用 `System.loadLibrary` 装载 mozglue、xul、nss3 | external 不可遗漏 zygote 预加载路径，也不能默认它能读取私有动态包 |
-| S9 | [geckoview/build.gradle](https://github.com/mozilla-firefox/firefox/blob/d6fd7a4e69b3c2d4550582eb38d2cdbd9cbad79a/mobile/android/geckoview/build.gradle#L118) | Gecko assets 从 staging 引入；JNI 目录单独引入；Lite 与 Omni 的依赖能力不同 | 有明确打包拆分入口，但尚未形成可直接发布的 bridge/core 两套产物 |
+| S9 | [geckoview/build.gradle](https://github.com/mozilla-firefox/firefox/blob/d6fd7a4e69b3c2d4550582eb38d2cdbd9cbad79a/mobile/android/geckoview/build.gradle#L17) | compileSdk 使用生成的 major/minor 参数；Gecko assets、JNI 目录从 staging 分别引入；Lite 与 Omni 的依赖能力不同 | SDK 35 需同时修改生成参数与 Gradle 平台选择；有明确打包拆分入口，但尚未形成可直接发布的 bridge/core 两套产物 |
 | S10 | [mobile/android/moz.configure](https://github.com/mozilla-firefox/firefox/blob/d6fd7a4e69b3c2d4550582eb38d2cdbd9cbad79a/mobile/android/moz.configure#L5) | 存在 Lite 开关、HLS 标志和内容服务数配置；附带字体默认已排除 | 优先验证现成配置，不能把默认已做的优化再次算作定制收益 |
 | S11 | [toolkit/moz.configure](https://github.com/mozilla-firefox/firefox/blob/d6fd7a4e69b3c2d4550582eb38d2cdbd9cbad79a/toolkit/moz.configure#L1330) | 存在 Web Speech 和 WebRTC 的 configure 选项；EME 选择受条件约束 | 可以做独立裁剪实验；有选项不代表 Android 组合已经通过构建和回归 |
 | S12 | [package-manifest.in](https://github.com/mozilla-firefox/firefox/blob/d6fd7a4e69b3c2d4550582eb38d2cdbd9cbad79a/mobile/android/installer/package-manifest.in#L97) | 包清单包含扩展注册和 PDF.js 资源 | 删除 PDF/扩展涉及注册、资源和依赖，不能直接从 ZIP 中删文件后宣称兼容 |
-| S13 | [android-sdk.configure](https://github.com/mozilla-firefox/firefox/blob/d6fd7a4e69b3c2d4550582eb38d2cdbd9cbad79a/build/moz.configure/android-sdk.configure#L151) | 此修订默认 minSdk=26、targetSdk=37、compileSdk=37.2；所读配置提供 minSdk 覆盖入口，target 默认值来自 namespace | 首期沿用支持下限和编译要求；另验证宿主 target 30，不假定已存在可直接使用的 target 覆盖开关 |
+| S13 | [android-sdk.configure](https://github.com/mozilla-firefox/firefox/blob/d6fd7a4e69b3c2d4550582eb38d2cdbd9cbad79a/build/moz.configure/android-sdk.configure#L151) | 此修订默认 minSdk=26、targetSdk=37、compileSdk=37.2；SDK 平台查找也使用 major/minor 版本拼接；所读配置提供 minSdk 覆盖入口 | 按产品要求回移到 compileSdk=35 / target=30，沿用 minSdk=26；不能只改 Gradle 或假定已存在 target/compile 覆盖开关 |
 | S14 | [GeckoRuntime.java](https://github.com/mozilla-firefox/firefox/blob/d6fd7a4e69b3c2d4550582eb38d2cdbd9cbad79a/mobile/android/geckoview/src/main/java/org/mozilla/geckoview/GeckoRuntime.java#L694) | Runtime 创建经过 init；shutdown 使已关联 Session 失效 | 设计不能将关闭 Session 或 shutdown 视为可安全卸载并重载 native 的契约 |
 | S15 | [toolkit/moz.configure：Crash reporter](https://github.com/mozilla-firefox/firefox/blob/d6fd7a4e69b3c2d4550582eb38d2cdbd9cbad79a/toolkit/moz.configure#L3499) | 存在 `--enable-crashreporter` 布尔配置并生成 `MOZ_CRASHREPORTER`；默认值受目标与开发构建条件影响 | 将对应的 `--disable-crashreporter` 列为编译裁剪入口；Android 服务、回调和资源是否随之排除需要依赖分析和构建验证，不能拿开发构建默认未启用的结果冒充 release 裁剪收益 |
 
@@ -39,6 +39,8 @@
 - [Android 16 KB 页适配](https://developer.android.com/guide/practices/page-sizes)：原生库需要核查 ELF 对齐并在对应环境测试；不将仅测试 4 KB 环境视为兼容完成。
 - [Android SDK 版本参数](https://developer.android.com/ndk/guides/sdk-versions)：应用 target 会影响 Java/native 的运行行为，设备 API 和 native 支持下限是另外的参数；较低 target 不等于要降低 compileSdk。
 - [Android Manifest 合并](https://developer.android.com/build/manage-manifests)：最终应用合并多个库的 Manifest，应用构建配置具有更高优先级；需检查实际打包结果，不能只看 AAR 声明。
+- [Android 15 SDK 设置](https://developer.android.com/about/versions/15/setup-sdk)：API 35 平台及 compileSdk=35 的配置依据；平台 SDK 版本与工具链版本分别验证。
+- [Android 库发布准备](https://developer.android.com/build/publish-library/prep-lib-release)：AAR 的 minCompileSdk 限制接入方的编译 SDK，不能只降低自己的 Gradle 数字却保留要求更高平台的依赖。
 - [Mozilla MPL 2.0 FAQ](https://www.mozilla.org/en-US/MPL/2.0/FAQ/)：理解上游文件授权及分发源码义务的入口，最终按实际文件许可证和分发内容检查。
 
 以上均为源码或工程文档引用，不是具体内核分发渠道或下载链接。文档页面会更新，源码事实以固定 SHA 为准。
@@ -52,6 +54,6 @@
 5. 各裁剪项在 Android 上的有效性、实际减少体积、页面能力损失和链接期依赖。
 6. 同 bridge 兼容更新允许哪些源码变动，生成 BuildConfig、JNI 或 service 契约是否改变；未经配对测试不能推导兼容。
 7. 禁用 Crash reporter 后，crashhelper 服务、native 依赖、Java/JNI 回调及打包资源的实际残留；无 reporter 产物的启动失败检测与恢复是否仍独立可用。
-8. 宿主最终 target 为 30 时，Gecko Java/native、权限、服务、存储和 linker 行为是否正常；保持上游 compileSdk 的条件下，静态与外置模式分别需要哪些适配补丁。
+8. 产品 compileSdk=35、宿主 target=30 时，Java/native、权限、服务、存储和 linker 行为是否正常；高版本平台符号、资源和传递依赖分别需要哪些回移/删除补丁。当前未运行 SDK 35 构建，尚无经构建确认的具体不支持功能清单。
 
 未运行这些验证之前，只能说方案已定位入口，不能说已经支持动态加载、已经缩小体积或已经完成平台适配。

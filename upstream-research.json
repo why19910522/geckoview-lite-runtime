@@ -8,6 +8,8 @@
   "productionBaselineSelected": false,
   "observedAndroidDefaults": {
     "minSdk": 26,
-    "targetSdk": 37
+    "targetSdk": 37,
+    "compileSdkMajor": 37,
+    "compileSdkMinor": 2
   }
 }
