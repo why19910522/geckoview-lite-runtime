@@ -1,0 +1,64 @@
+--- a/mobile/shared/modules/geckoview/moz.build
++++ b/mobile/shared/modules/geckoview/moz.build
+@@ -4,7 +4,6 @@
+ 
+ EXTRA_JS_MODULES += [
+     "BrowserUsageTelemetry.sys.mjs",
+-    "ChildCrashHandler.sys.mjs",
+     "DelayedInit.sys.mjs",
+     "GeckoViewActorChild.sys.mjs",
+     "GeckoViewActorManager.sys.mjs",
+--- a/mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs
++++ b/mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs
+@@ -269,19 +269,8 @@
+             ],
+           });
+ 
+-          GeckoViewUtils.addLazyGetter(this, "ChildCrashHandler", {
+-            module: "resource://gre/modules/ChildCrashHandler.sys.mjs",
+-            observers: [
+-              "compositor:process-aborted",
+-              "ipc:content-created",
+-              "ipc:content-shutdown",
+-              "process-type-set",
+-            ],
+-          });
+-
+           lazy.EventDispatcher.instance.registerListener(this, [
+             "GeckoView:StorageDelegate:Attached",
+-            "GeckoView:CrashPullController.Delegate:Attached",
+           ]);
+ 
+           // We don't register this using the LazyGetter because it needs to be
+@@ -504,19 +493,6 @@
+         });
+         break;
+ 
+-      case "GeckoView:CrashPullController.Delegate:Attached":
+-        if (!this.RemoteSettingsCrashPull) {
+-          GeckoViewUtils.addLazyGetter(this, "RemoteSettingsCrashPull", {
+-            module: "resource://gre/modules/RemoteSettingsCrashPull.sys.mjs",
+-          });
+-          GeckoViewUtils.addLazyGetter(this, "crashPullCallback", {
+-            module: "resource://gre/modules/ChildCrashHandler.sys.mjs",
+-          });
+-          InitLater(() =>
+-            this.RemoteSettingsCrashPull.start(this.crashPullCallback)
+-          );
+-        }
+-        break;
+     }
+   }
+ }
+--- a/toolkit/locales/jar.mn
++++ b/toolkit/locales/jar.mn
+@@ -4,7 +4,9 @@
+ # file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ 
+ [localization] @AB_CD@.jar:
++#ifdef MOZ_CRASHREPORTER
+   crashreporter                                    (%crashreporter/**/*.ftl)
++#endif
+   services                                         (%services/**/*.ftl)
+   toolkit                                          (%toolkit/**/*.ftl)
+   locales-preview/aboutRestricted.ftl              (../locales-preview/aboutRestricted.ftl)

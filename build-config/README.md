@@ -34,6 +34,8 @@ export GRADLE_MAVEN_REPOSITORIES="https://repo.maven.apache.org/maven2/,https://
 
 ```sh
 mise x python@3.12.14 uv@0.13.0 -- python mach configure
+mise x python@3.12.14 uv@0.13.0 -- python mach build pre-export
+mise x python@3.12.14 uv@0.13.0 -- python mach build export
 mise x python@3.12.14 uv@0.13.0 -- python mach build binaries
 mise x python@3.12.14 uv@0.13.0 -- python mach gradle \
   geckoview:checkDebugAarMetadata geckoview:assembleDebug \
@@ -43,3 +45,10 @@ mise x python@3.12.14 uv@0.13.0 -- python mach gradle \
 configure 通过后核对 `config.status.json` 的 SDK/ABI 参数，不能只看 mozconfig 文本。AAR、宿主和验证任务以实际构建记录为准，不把尚未执行的命令记为通过。
 
 本次已验证的准确步骤和失败边界见[构建记录](../docs/builds/2026-10-23-sdk35-static.md)。上游总 `mach build` 额外构建多个示例/测试应用，其中消息示例依赖要求 API 37；以上产品目标与独立宿主不跳过元数据检查。
+
+
+## Lite / 无 Crash reporter / zh-CN 变体
+
+使用 `mozconfig-sdk35-lite-zh-CN-arm64`，先应用 SDK35 补丁再应用 `patches/lite-zh-CN/series`。相同 SDK/工具链环境外，设置独立 `GECKO_OBJDIR`，以及指向已固定中文翻译仓库根目录的 `GECKO_L10N_BASE`。旧配置仅适用于没有应用产品移除补丁的基线源码工作区。
+
+新对象目录必须先执行 `pre-export`、`export`，再执行 `binaries`；上一轮 `binaries` 的成功使用了已由总构建准备好的对象目录，不能将其当作从零生成全部公共文件的命令。
