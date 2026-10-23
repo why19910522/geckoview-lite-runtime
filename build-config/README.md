@@ -27,7 +27,12 @@
 
 ```sh
 mise x python@3.12.14 uv@0.13.0 -- python mach configure
-mise x python@3.12.14 uv@0.13.0 -- python mach build
+mise x python@3.12.14 uv@0.13.0 -- python mach build binaries
+mise x python@3.12.14 uv@0.13.0 -- python mach gradle \
+  geckoview:checkDebugAarMetadata geckoview:assembleDebug \
+  geckoview:publishDebugPublicationToMavenRepository
 ```
 
 configure 通过后核对 `config.status.json` 的 SDK/ABI 参数，不能只看 mozconfig 文本。AAR、宿主和验证任务以实际构建记录为准，不把尚未执行的命令记为通过。
+
+本次已验证的准确步骤和失败边界见[构建记录](../docs/builds/2026-10-23-sdk35-static.md)。上游总 `mach build` 额外构建多个示例/测试应用，其中消息示例依赖要求 API 37；以上产品目标与独立宿主不跳过元数据检查。

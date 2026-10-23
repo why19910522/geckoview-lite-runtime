@@ -14,3 +14,5 @@ artifacts/
 .worktrees/
 .superpowers/
 graphify-out/
+/smoke-host/app/build/
+/smoke-host/build/
