@@ -66,7 +66,7 @@
 - [x] 用 compileSdk=35/targetSdk=30 的最小宿主消费本地 AAR，验证传递依赖。
 - [x] 用 AAPT/ZIP/ELF 工具核对最终 Manifest、AAR 元数据、arm64 native 库和 Gecko 资源。
 - [x] 报告 AAR/APK 大小、摘要及 native 编译来源；运行测试未执行则明确列出。
-- [ ] 执行文档、补丁应用及构建产物检查，提交代码/补丁/记录并做独立审阅。
+- [x] 执行文档、补丁应用及构建产物检查，提交代码/补丁/记录并做独立审阅。
 
 ## 完成条件
 
@@ -75,3 +75,5 @@
 ## 实施范围调整（真实编译证据）
 
 `mach build` 已完成 native 生成，聚合归档随后在 `messaging_example:checkDebugAarMetadata` 因其 Core/Core KTX 1.19.1 要求 API 37 失败。上游聚合任务还包括 AndroidTest、test_runner 与完整示例应用。此轮使用完整 `mach build binaries` 和 GeckoView AAR 发布目标，再由本项目独立 SDK 35 宿主检查产品传递依赖。保留上游测试和校验，不为本轮静态内核任务扩大到移植所有 Mozilla 示例；不得宣称聚合 `mach build` 或上游测试已通过。
+
+独立审阅结论：本轮静态构建范围可合入，无 Critical/Important 项；补齐了实际 Maven 构建仓库环境变量的复现说明。

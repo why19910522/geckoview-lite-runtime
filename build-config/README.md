@@ -21,7 +21,14 @@
 | GECKO_JAVA_HOME | Java 17 的 Home 目录 |
 | RUSTC / CARGO | 同一套 Rust 工具链的实际可执行文件路径 |
 | ANDROID_HOME / ANDROID_SDK_ROOT | 都与 GECKO_ANDROID_SDK_ROOT 一致，防止 Gradle 选择其他 SDK |
+| GRADLE_MAVEN_REPOSITORIES | 本次使用下方记录的四个构建依赖仓库及顺序 |
 | GRADLE_FLAGS | 添加 `-Pandroid.builder.sdkDownload=false`，防止 Gradle 自动取得更高平台 |
+
+本次使用以下构建依赖仓库覆盖值，与生成配置一致。坐标过滤由补丁 0003 处理；这些是构建输入，不是内核分发渠道：
+
+```sh
+export GRADLE_MAVEN_REPOSITORIES="https://repo.maven.apache.org/maven2/,https://dl.google.com/dl/android/maven2/,https://maven.mozilla.org/maven2/,https://plugins.gradle.org/m2/"
+```
 
 在源码根目录用项目固定 Python/uv 运行：
 
