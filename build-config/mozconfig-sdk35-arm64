@@ -1,0 +1,25 @@
+# Full source build. SDK values are supplied by patches/sdk35, not by an
+# Android platform stub or by changing only the consuming app.
+: "${GECKO_OBJDIR:?Set GECKO_OBJDIR to an absolute local build directory}"
+: "${GECKO_ANDROID_SDK_ROOT:?Set GECKO_ANDROID_SDK_ROOT to an API-35-only SDK root}"
+: "${GECKO_ANDROID_NDK_ROOT:?Set GECKO_ANDROID_NDK_ROOT to the supported NDK r30}"
+: "${GECKO_JAVA_HOME:?Set GECKO_JAVA_HOME to the selected Java 17 installation}"
+
+mk_add_options MOZ_OBJDIR="$GECKO_OBJDIR"
+mk_add_options MOZ_MAKE_FLAGS="-j12"
+
+ac_add_options --enable-project=mobile/android
+ac_add_options --enable-android-subproject=geckoview_example
+ac_add_options --target=aarch64-linux-android
+ac_add_options --with-android-min-sdk=26
+ac_add_options --with-android-sdk="$GECKO_ANDROID_SDK_ROOT"
+ac_add_options --with-android-ndk="$GECKO_ANDROID_NDK_ROOT"
+ac_add_options --with-java-bin-path="$GECKO_JAVA_HOME/bin"
+ac_add_options --enable-bootstrap=-android-sdk,-jdk
+ac_add_options --disable-debug
+ac_add_options --enable-optimize
+
+# Keep upstream functional defaults for the first build. Optional removals
+# must follow a reproduced compile/link failure and be recorded separately.
+export MOZ_SOURCE_REPO=https://github.com/mozilla-firefox/firefox
+export MOZ_SOURCE_CHANGESET=d6fd7a4e69b3c2d4550582eb38d2cdbd9cbad79a

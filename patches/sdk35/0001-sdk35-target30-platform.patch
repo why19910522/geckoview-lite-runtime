@@ -1,0 +1,28 @@
+--- a/build/moz.configure/android-sdk.configure
++++ b/build/moz.configure/android-sdk.configure
+@@ -151,12 +151,12 @@
+ @dependable
+ def android_sdk_version():
+     build_tools_version = "37.0.0"
+-    compile_sdk_major_version, compile_sdk_minor_version = "37", "2"
++    compile_sdk_major_version, compile_sdk_minor_version = "35", "0"
+     return namespace(
+         build_tools_version=build_tools_version,
+         compile_sdk_major_version=compile_sdk_major_version,
+         compile_sdk_minor_version=compile_sdk_minor_version,
+-        target_sdk_version="37",
++        target_sdk_version="30",
+         min_sdk_version="26",
+     )
+ 
+@@ -225,7 +225,9 @@
+ @imports(_from="mozboot.android", _import="AndroidPackageList")
+ def android_platforms(sdk_root, sdk_version, android_os_info, want_bootstrap):
+     prefix = "platforms"
+-    version = f"{sdk_version.compile_sdk_major_version}.{sdk_version.compile_sdk_minor_version}"
++    version = sdk_version.compile_sdk_major_version
++    if sdk_version.compile_sdk_minor_version != "0":
++        version += f".{sdk_version.compile_sdk_minor_version}"
+     return _ensure_android_package(
+         package_relative_path=os.path.join(prefix, f"android-{version}"),
+         sdk_root=sdk_root,

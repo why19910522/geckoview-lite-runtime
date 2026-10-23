@@ -11,3 +11,6 @@ artifacts/
 *.pem
 .env
 .env.*
+.worktrees/
+.superpowers/
+graphify-out/
