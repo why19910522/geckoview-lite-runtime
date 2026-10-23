@@ -1,0 +1,26 @@
+--- a/mobile/android/geckoview/src/main/java/org/mozilla/geckoview/SessionAccessibility.java
++++ b/mobile/android/geckoview/src/main/java/org/mozilla/geckoview/SessionAccessibility.java
+@@ -840,20 +840,9 @@
+       // setHeading, setImportantForAccessibility, setScreenReaderFocusable, setShowingHintText,
+       // setDismissable
+ 
+-      if (Build.VERSION.SDK_INT >= 36) {
+-        node.setFieldRequired((flags & FLAG_REQUIRED) != 0);
+-      }
+-
+-      // Use proper setChecked for API version.
+-      if (Build.VERSION.SDK_INT >= 36) {
+-        if ((flags & FLAG_CHECKED) != 0) {
+-          node.setChecked(AccessibilityNodeInfo.CHECKED_STATE_TRUE);
+-        } else if ((flags & FLAG_MIXED) != 0) {
+-          node.setChecked(AccessibilityNodeInfo.CHECKED_STATE_PARTIAL);
+-        }
+-      } else {
+-        node.setChecked((flags & FLAG_CHECKED) != 0);
+-      }
++      // SDK 35 baseline: keep the existing boolean checked-state fallback.
++      // API 36 required-field and tri-state node properties are unavailable.
++      node.setChecked((flags & FLAG_CHECKED) != 0);
+ 
+       if (mAccessibilityFocusedNode == id) {
+         node.addAction(AccessibilityNodeInfo.ACTION_CLEAR_ACCESSIBILITY_FOCUS);

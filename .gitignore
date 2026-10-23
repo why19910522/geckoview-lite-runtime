@@ -11,3 +11,8 @@ artifacts/
 *.pem
 .env
 .env.*
+.worktrees/
+.superpowers/
+graphify-out/
+/smoke-host/app/build/
+/smoke-host/build/
