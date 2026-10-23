@@ -16,6 +16,10 @@ ac_add_options --with-android-sdk="$GECKO_ANDROID_SDK_ROOT"
 ac_add_options --with-android-ndk="$GECKO_ANDROID_NDK_ROOT"
 ac_add_options --with-java-bin-path="$GECKO_JAVA_HOME/bin"
 ac_add_options --enable-bootstrap=-android-sdk,-jdk
+# Media3 1.11.1 requires compileSdk 36; retain the SDK 35 baseline without HLS.
+ac_add_options --disable-android-hls
+# Android developer builds disable this implicitly; retain it explicitly for this baseline.
+ac_add_options --enable-crashreporter
 ac_add_options --disable-debug
 ac_add_options --enable-optimize
 

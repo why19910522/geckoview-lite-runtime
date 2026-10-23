@@ -1,12 +1,12 @@
 # 静态 arm64 构建配置
 
-`mozconfig-sdk35-arm64` 使用完整源码编译，不启用 Artifact Build，也未预先禁用 WebRTC、媒体、PDF 或 Crash reporter。首轮删除项必须由实际编译错误支撑。
+`mozconfig-sdk35-arm64` 使用完整源码编译，不启用 Artifact Build，保留 WebRTC、普通媒体、PDF 和 Crash reporter；因真实 AAR 元数据失败关闭原生 HLS/Media3。裁剪依据见 `patches/sdk35/README.md`。
 
 构建前固定 `upstream-research.json` 的修订并应用 `patches/sdk35/series`。需要单独准备：
 
 - 只提供 `platforms/android-35` 的产品 SDK 根目录。
 - 锁定上游要求的 Build Tools 37.0.0、cmdline-tools 23.0、Bundletool 1.18.3；工具版本与 compileSdk 不同。
-- NDK r30、Java 17，以及 Mozilla bootstrap 选出的 Clang 等工具。
+- NDK r30（本机验证版本为 r30-beta2）、Java 17，以及 Mozilla bootstrap 选出的 Clang 等工具。
 - 含 `aarch64-linux-android` 标准库的 Rust；显式选择 RUSTC/CARGO，避免误用不含交叉目标的另一套 Rust。
 
 在运行 mach 前设置下列本机环境变量，不将本机路径或凭据写入版本库：
