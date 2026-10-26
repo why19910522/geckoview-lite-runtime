@@ -23,3 +23,9 @@
 构建需要额外 Mozilla 运行时依赖仓库时，可从本机环境传入 `-PupstreamDependencyRepository="$GECKO_DEPENDENCY_REPOSITORY"`。这是构建依赖源，宿主不读取它作为内核下载渠道。`org.mozilla.geckoview` 被独占限制为指定本地目录，不能回退到在线预编译内核。
 
 保留 AAR 元数据检查与 SDK 自动下载禁用设置。输出 `app/build/outputs/apk/debug/app-debug.apk` 只证明编译/打包；未在设备启动前不能把页面内的成功标记当作运行验证结果。APK 包含调试签名，仅用于验证。
+
+## 消费本地 Release AAR
+
+将本地 Maven 路径与准确坐标切换到对应 Release 构建记录中的值，执行 `:app:assembleRelease`。当前已验证记录见[无 Glean 中文 Release AAR](../docs/builds/2026-10-26-no-glean-release-zh-CN.md)。宿主输出 `app/build/outputs/apk/release/app-release-unsigned.apk`，仅用于消费和包检查；AAR 本身无需 APK 签名。
+
+用户指定 targetSdk30，因此本地宿主只对 lint 的 `ExpiredTargetSdkVersion` 发布策略诊断定点豁免；其他 lint 和 AAR/API 元数据检查继续启用。不把本地验证结论表述为应用商店发布资格。

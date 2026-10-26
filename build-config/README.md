@@ -52,3 +52,9 @@ configure 通过后核对 `config.status.json` 的 SDK/ABI 参数，不能只看
 使用 `mozconfig-sdk35-lite-zh-CN-arm64`，先应用 SDK35 补丁再应用 `patches/lite-zh-CN/series`。相同 SDK/工具链环境外，设置独立 `GECKO_OBJDIR`，以及指向已固定中文翻译仓库根目录的 `GECKO_L10N_BASE`。旧配置仅适用于没有应用产品移除补丁的基线源码工作区。
 
 新对象目录必须先执行 `pre-export`、`export`，再执行 `binaries`；上一轮 `binaries` 的成功使用了已由总构建准备好的对象目录，不能将其当作从零生成全部公共文件的命令。
+
+## 无 Glean 后端 / 中文 Release 变体
+
+使用 `mozconfig-sdk35-lite-no-glean-release-zh-CN-arm64`，依次应用 `sdk35`、`lite-zh-CN`、`no-glean-release` 三组补丁，固定相同翻译和工具环境，使用独立 objdir。产品补丁移除 SDK 后端并改为发布 Gradle Release 组件；必须 `--disable-glean`。旧变体需在仅应用各自补丁的独立源码目录重建，不能将旧 mozconfig 用在此最终产品源码上。
+
+完整命令、无操作兼容层边界及实际摘要见[Release 构建记录](../docs/builds/2026-10-26-no-glean-release-zh-CN.md)。最后执行 `checkReleaseAarMetadata`、`assembleRelease` 和 `publishReleasePublicationToMavenRepository`；不能重命名旧 Debug AAR 冒充 Release。

@@ -49,3 +49,5 @@
 首轮实施采用[静态产品构建闭包](builds/2026-10-23-sdk35-static.md)：完整 native 目标 + GeckoView AAR + 独立 SDK 35 宿主。上游聚合归档因消息示例依赖 API 37 未通过；没有通过删改上游测试来扩大通过结论。
 
 当前 Lite 中文变体采用独立产品源码补丁移除 reporter；原“默认保留”用于旧构建基线，不覆盖用户本轮明确的移除要求。详见 [Lite 中文 AAR 记录](builds/2026-10-23-lite-zh-CN.md)。
+
+2026-10-26：用户要求继续移除 Glean 并生成 Release AAR，保持 compile35/target30 和仅中文。当前产品额外移除 Glean SDK、FOG/JOG/Trace 后端，保留无操作指标兼容接口；实际 Release 组件及 optimized non-debug native 已验证。详见[Release 记录](builds/2026-10-26-no-glean-release-zh-CN.md)。此前 Debug 变体及“仍保留 Glean”的记录作为历史基线，不代表当前产物。

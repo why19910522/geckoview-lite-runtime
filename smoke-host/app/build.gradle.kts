@@ -16,6 +16,12 @@ android {
         ndk { abiFilters += "arm64-v8a" }
     }
 
+    lint {
+        // This local verification host intentionally retains the requested targetSdk 30.
+        // Only the Play publication policy check is excluded; runtime/API checks remain enabled.
+        disable += "ExpiredTargetSdkVersion"
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

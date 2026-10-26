@@ -1,0 +1,34 @@
+# Full source build. SDK values are supplied by patches/sdk35, not by an
+# Android platform stub or by changing only the consuming app.
+: "${GECKO_OBJDIR:?Set GECKO_OBJDIR to an absolute local build directory}"
+: "${GECKO_ANDROID_SDK_ROOT:?Set GECKO_ANDROID_SDK_ROOT to an API-35-only SDK root}"
+: "${GECKO_ANDROID_NDK_ROOT:?Set GECKO_ANDROID_NDK_ROOT to the supported NDK r30}"
+: "${GECKO_JAVA_HOME:?Set GECKO_JAVA_HOME to the selected Java 17 installation}"
+
+mk_add_options MOZ_OBJDIR="$GECKO_OBJDIR"
+mk_add_options MOZ_MAKE_FLAGS="-j12"
+
+ac_add_options --enable-project=mobile/android
+ac_add_options --enable-android-subproject=geckoview_example
+ac_add_options --target=aarch64-linux-android
+ac_add_options --with-android-min-sdk=26
+ac_add_options --with-android-sdk="$GECKO_ANDROID_SDK_ROOT"
+ac_add_options --with-android-ndk="$GECKO_ANDROID_NDK_ROOT"
+ac_add_options --with-java-bin-path="$GECKO_JAVA_HOME/bin"
+ac_add_options --enable-bootstrap=-android-sdk,-jdk
+# Media3 1.11.1 requires compileSdk 36; retain the SDK 35 baseline without HLS.
+ac_add_options --disable-android-hls
+# Explicit product selection: Lite, no reporter, single Simplified Chinese locale.
+ac_add_options --enable-geckoview-lite
+ac_add_options --disable-crashreporter
+ac_add_options --disable-glean
+ac_add_options --enable-ui-locale=zh-CN
+ac_add_options --with-l10n-base="${GECKO_L10N_BASE:?Set GECKO_L10N_BASE to the pinned locale repository root}"
+ac_add_options --disable-debug
+ac_add_options --enable-optimize
+ac_add_options --enable-release
+
+# Apply patches/sdk35, patches/lite-zh-CN, then patches/no-glean-release.
+# This product removes reporter and Glean SDK backends; Gradle publishes Release.
+export MOZ_SOURCE_REPO=https://github.com/mozilla-firefox/firefox
+export MOZ_SOURCE_CHANGESET=d6fd7a4e69b3c2d4550582eb38d2cdbd9cbad79a
