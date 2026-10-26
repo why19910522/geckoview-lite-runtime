@@ -16,3 +16,7 @@ artifacts/
 graphify-out/
 /smoke-host/app/build/
 /smoke-host/build/
+
+/runtime-external/build/
+__pycache__/
+*.pyc
