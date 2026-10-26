@@ -29,3 +29,31 @@
 将本地 Maven 路径与准确坐标切换到对应 Release 构建记录中的值，执行 `:app:assembleRelease`。当前已验证记录见[无 Glean 中文 Release AAR](../docs/builds/2026-10-26-no-glean-release-zh-CN.md)。宿主输出 `app/build/outputs/apk/release/app-release-unsigned.apk`，仅用于消费和包检查；AAR 本身无需 APK 签名。
 
 用户指定 targetSdk30，因此本地宿主只对 lint 的 `ExpiredTargetSdkVersion` 发布策略诊断定点豁免；其他 lint 和 AAR/API 元数据检查继续启用。不把本地验证结论表述为应用商店发布资格。
+
+## 可选运行探针与 DevTools 验证
+
+默认仍打开 `smoke.html` 且不启用远程调试。显式添加以下参数并同时构建 Debug/Release，可对本轮裁剪变体启用本地运行探针：
+
+```sh
+"$GECKO_SOURCE_DIR/gradlew" -p "$RUNTIME_REPO/smoke-host" \
+  -PgeckoRepository="$GECKO_REPOSITORY" \
+  -PgeckoCoordinate="$GECKO_COORDINATE" \
+  -PsmokeApplicationId=dev.geckolite.smoke.trimprobe.opt \
+  -PruntimeProbe=true -PexpectTrimmed=true \
+  :app:assembleDebug :app:assembleRelease --console=plain
+```
+
+用独立 applicationId 避免覆盖已有应用，安装 Debug APK 后启动。探针检查 DOM 中文、Canvas 像素、WebGL context/version、合法空 Wasm 模块、IndexedDB/WebRTC 接口存在性，以及三个 Speech 接口缺失。它不测试实际 IndexedDB 读写、WebRTC 通话、音视频或真实站点。页面上的小型 layout/canvas 计时只用于发现明显异常，不构成全面性能基准。
+
+等页面标题或本应用 `GeckoTrimProbe` 日志出现 `TRIM_PROBE` 完成结果后，再转发应用的 Gecko DevTools abstract socket 并运行：
+
+```sh
+# DEVICE_ID 和 PROBE_APP_ID 由接入方指定；记录 adb 实际返回的空闲端口。
+adb -s "$DEVICE_ID" forward tcp:0 "localabstract:$PROBE_APP_ID/firefox-debugger-socket"
+python3 "$RUNTIME_REPO/smoke-host/scripts/probe-rdp.py" \
+  --port "$FORWARDED_PORT" --output "$LOCAL_REPORT_PATH" --navigate-pdf
+```
+
+脚本核验 RDP 握手、listTabs、getTarget、thread/inspector actor 及 console evaluation，随后读取页面结果。脚本不自动等待页面探针完成，过早执行会失败，可在完成后重试。可选 `--navigate-pdf` 仅调度本地 PDF 导航；还必须检查本应用 PID 的 `GeckoTrimProbe` 日志中 `EXTERNAL_RESPONSE` 回调和 `application/pdf`、414 字节响应长度，不能把调度成功当作 PDF 处理通过。宿主仅关闭测试响应流，实际应用需要实现保存或外部打开。
+
+完成后移除自己创建的端口转发及测试应用，不清理其他应用或全设备日志。本轮实际设备证据和限制见[裁剪与优化记录](../docs/builds/2026-10-26-pdf-speech-cxx-size.md)。

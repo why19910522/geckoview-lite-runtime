@@ -1,6 +1,6 @@
 # 决策记录
 
-更新日期：2026-10-23。状态：方案及实施决策；静态构建验证记录已建立。
+更新日期：2026-10-26。状态：方案及实施决策；静态构建与最小真机验证记录已建立。
 
 ## 用户已确认的要求
 
@@ -13,6 +13,8 @@
 7. compileSdk 降为 35，允许删除不受支持的可选功能；具体功能按实际依赖分析与构建失败确定。
 8. 静态验证明确使用 compileSdk 35、targetSdk 30。
 9. 后续明确要求开启 GeckoView Lite、关闭并移除 Crash reporter、本地化只保留中文；当前按 zh-CN 生成 AAR。
+10. 移除 Glean SDK 后端并生成 Release AAR。
+11. DevTools 必须保留；删除 PDF.js 和 Web Speech，并优化 C++ 编译。
 
 ## 本方案采用的默认选择
 
@@ -51,3 +53,5 @@
 当前 Lite 中文变体采用独立产品源码补丁移除 reporter；原“默认保留”用于旧构建基线，不覆盖用户本轮明确的移除要求。详见 [Lite 中文 AAR 记录](builds/2026-10-23-lite-zh-CN.md)。
 
 2026-10-26：用户要求继续移除 Glean 并生成 Release AAR，保持 compile35/target30 和仅中文。当前产品额外移除 Glean SDK、FOG/JOG/Trace 后端，保留无操作指标兼容接口；实际 Release 组件及 optimized non-debug native 已验证。详见[Release 记录](builds/2026-10-26-no-glean-release-zh-CN.md)。此前 Debug 变体及“仍保留 Glean”的记录作为历史基线，不代表当前产物。
+
+2026-10-26：按最新要求移除 PDF.js 查看器及 Web Speech 的构建/资源/Java/JNI 闭包，保留 DevTools server、WebRTC、JXL、断词词典和 PDF 打印/生成。PDF 响应由宿主通过 `onExternalResponse` 接管。相同裁剪源码的 `-O2` 与 C/C++ `-Os + ThinLTO` 对照，AAR 从 78.93 MiB 降至 70.94 MiB；选择后者为当前交付。Rust 不启用跨语言 LTO。两版在一台 Android 16 arm64 真机通过最小页面、Speech 接口移除、DevTools 与 PDF 外部响应检查；不据此保证全面性能或设备兼容性。见[本轮记录](builds/2026-10-26-pdf-speech-cxx-size.md)。

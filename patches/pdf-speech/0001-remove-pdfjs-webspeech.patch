@@ -1,0 +1,264 @@
+--- a/mobile/android/app/geckoview-prefs.js
++++ b/mobile/android/app/geckoview-prefs.js
+@@ -387,3 +387,6 @@
+ pref("browser.ipProtection.enabled", true);
+ pref("browser.ipProtection.guardian.endpoint", "https://vpn.mozilla.org/");
+ pref("toolkit.ipProtection.android.authProvider", "fxa");
++
++// This product has no PDF.js stream converter or viewer.
++pref("pdfjs.disabled", true);
+--- a/mobile/android/geckoview/build.gradle
++++ b/mobile/android/geckoview/build.gradle
+@@ -7,6 +7,10 @@
+ 
+ import groovy.json.JsonOutput
+ import org.mozilla.conventions.WriteRuntimeDependencies
++
++if (mozconfig.substs.MOZ_PDFJS || mozconfig.substs.MOZ_WEBSPEECH) {
++    throw new GradleException("This product requires --disable-pdfjs --disable-webspeech")
++}
+ 
+ if (mozconfig.substs.MOZ_GLEAN || mozconfig.substs.MOZ_GLEAN_ANDROID) {
+     throw new GradleException("The no-Glean product requires --disable-glean")
+@@ -97,6 +101,7 @@
+                 exclude 'org/mozilla/geckoview/CrashHandler.java'
+                 exclude 'org/mozilla/geckoview/CrashReporter.java'
+                 exclude 'org/mozilla/geckoview/CrashPullController.java'
++                exclude 'org/mozilla/gecko/SpeechSynthesisService.java'
+ 
+                 if (!mozconfig.substs.MOZ_ANDROID_HLS_SUPPORT) {
+                     exclude 'org/mozilla/gecko/media/GeckoHlsAudioRenderer.java'
+@@ -289,6 +294,7 @@
+         exclude 'org/mozilla/geckoview/CrashHandler.java'
+         exclude 'org/mozilla/geckoview/CrashReporter.java'
+         exclude 'org/mozilla/geckoview/CrashPullController.java'
++                exclude 'org/mozilla/gecko/SpeechSynthesisService.java'
+         include 'org/mozilla/geckoview/**.java'
+         options.addStringOption("Xmaxwarns", "1000")
+         if (!project.hasProperty('android-lint')) {
+@@ -336,6 +342,7 @@
+         exclude 'org/mozilla/geckoview/CrashHandler.java'
+         exclude 'org/mozilla/geckoview/CrashReporter.java'
+         exclude 'org/mozilla/geckoview/CrashPullController.java'
++                exclude 'org/mozilla/gecko/SpeechSynthesisService.java'
+     }
+ 
+     tasks.register("checkstyle${name.capitalize()}", Checkstyle) {
+--- a/mobile/android/installer/package-manifest.in
++++ b/mobile/android/installer/package-manifest.in
+@@ -109,9 +109,11 @@
+ @BINPATH@/actors/*
+ 
+ ; [Browser Chrome Files]
++#ifdef MOZ_PDFJS
+ @BINPATH@/chrome/pdfjs.manifest
+ @BINPATH@/chrome/pdfjs/*
+ @BINPATH@/defaults/pref/PdfJsDefaultPrefs.js
++#endif
+ @BINPATH@/chrome/toolkit@JAREXT@
+ @BINPATH@/chrome/toolkit.manifest
+ 
+--- a/mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs
++++ b/mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs
+@@ -11,7 +11,6 @@
+   ActorManagerParent: "resource://gre/modules/ActorManagerParent.sys.mjs",
+   DoHController: "moz-src:///toolkit/components/doh/DoHController.sys.mjs",
+   EventDispatcher: "resource://gre/modules/Messaging.sys.mjs",
+-  PdfJs: "resource://pdf.js/PdfJs.sys.mjs",
+   GeckoViewPreferences: "resource://gre/modules/GeckoViewPreferences.sys.mjs",
+ });
+ 
+@@ -97,16 +96,6 @@
+     },
+     allFrames: true,
+     messageManagerGroups: ["browsers"],
+-    safeForUntrustedWebProcess: true,
+-  },
+-  GeckoViewPdfJs: {
+-    parent: {
+-      esModuleURI: "resource://pdf.js/GeckoViewPdfJsParent.sys.mjs",
+-    },
+-    child: {
+-      esModuleURI: "resource://pdf.js/GeckoViewPdfJsChild.sys.mjs",
+-    },
+-    allFrames: true,
+     safeForUntrustedWebProcess: true,
+   },
+ };
+@@ -366,7 +355,6 @@
+         ]);
+ 
+         Services.obs.addObserver(this, "browser-idle-startup-tasks-finished");
+-        Services.obs.addObserver(this, "handlersvc-store-initialized");
+         Services.obs.addObserver(
+           this,
+           "network:request-local-network-permission"
+@@ -387,19 +375,6 @@
+         // Notify the start up crash tracker that the browser has successfully
+         // started up so the startup cache isn't rebuilt on next startup.
+         Services.startup.trackStartupCrashEnd();
+-        break;
+-      }
+-      case "handlersvc-store-initialized": {
+-        // Initialize PdfJs when running in-process and remote. This only
+-        // happens once since PdfJs registers global hooks. If the PdfJs
+-        // extension is installed the init method below will be overridden
+-        // leaving initialization to the extension.
+-        // parent only: configure default prefs, set up pref observers, register
+-        // pdf content handler, and initializes parent side message manager
+-        // shim for privileged api access.
+-        try {
+-          lazy.PdfJs.init(this._isNewProfile);
+-        } catch {}
+         break;
+       }
+     }
+--- a/mobile/shared/modules/geckoview/GeckoViewContent.sys.mjs
++++ b/mobile/shared/modules/geckoview/GeckoViewContent.sys.mjs
+@@ -87,9 +87,7 @@
+   }
+ 
+   get isPdfJs() {
+-    return (
+-      this.browser.contentPrincipal.spec === "resource://pdf.js/web/viewer.html"
+-    );
++    return false;
+   }
+ 
+   // Goes up the browsingContext chain and sends the message every time
+--- a/toolkit/actors/moz.build
++++ b/toolkit/actors/moz.build
+@@ -32,8 +32,6 @@
+ MOZ_SRC_FILES += [
+     "AboutHttpsOnlyErrorChild.sys.mjs",
+     "AboutHttpsOnlyErrorParent.sys.mjs",
+-    "AboutPDFChild.sys.mjs",
+-    "AboutPDFParent.sys.mjs",
+     "AboutRestrictedChild.sys.mjs",
+     "AboutRestrictedParent.sys.mjs",
+     "AudioPlaybackChild.sys.mjs",
+--- a/toolkit/components/moz.build
++++ b/toolkit/components/moz.build
+@@ -62,7 +62,6 @@
+     "pageextractor",
+     "parentalcontrols",
+     "passwordmgr",
+-    "pdfjs",
+     "places",
+     "printing",
+     "processtools",
+@@ -167,3 +166,6 @@
+ UNIFIED_SOURCES += [
+     "/toolkit/components/antitracking/ContentBlockingAllowList.cpp",
+ ]
++
++if CONFIG["MOZ_PDFJS"]:
++    DIRS += ["pdfjs"]
+--- a/toolkit/modules/ActorManagerParent.sys.mjs
++++ b/toolkit/modules/ActorManagerParent.sys.mjs
+@@ -707,13 +707,6 @@
+ if (AppConstants.platform != "android") {
+   // The stream converter sends this message from the scriptless fallback page,
+   // so no child module is needed.
+-  JSWINDOWACTORS.PdfEmbedFallback = {
+-    parent: {
+-      esModuleURI: "resource://pdf.js/PdfEmbedFallbackParent.sys.mjs",
+-    },
+-    allFrames: true,
+-    safeForUntrustedWebProcess: true,
+-  };
+ 
+   // Note that GeckoView has another implementation in mobile/android/actors.
+   JSWINDOWACTORS.Select = {
+@@ -800,19 +793,6 @@
+     safeForUntrustedWebProcess: true,
+   };
+ 
+-  JSWINDOWACTORS.AboutPDF = {
+-    parent: {
+-      esModuleURI: "moz-src:///toolkit/actors/AboutPDFParent.sys.mjs",
+-    },
+-    child: {
+-      esModuleURI: "moz-src:///toolkit/actors/AboutPDFChild.sys.mjs",
+-      events: {
+-        DOMDocElementInserted: {},
+-      },
+-    },
+-    matches: ["about:pdf", "about:pdf?*", "about:pdf#*"],
+-    remoteTypes: ["privilegedabout"],
+-  };
+ 
+   JSWINDOWACTORS.AboutTranslations = {
+     parent: {
+--- a/toolkit/modules/Troubleshoot.sys.mjs
++++ b/toolkit/modules/Troubleshoot.sys.mjs
+@@ -8,7 +8,6 @@
+ const lazy = {};
+ 
+ ChromeUtils.defineESModuleGetters(lazy, {
+-  PDFJS_VERSION: "resource://pdf.js/PdfJsVersion.sys.mjs",
+   PlacesDBUtils: "resource://gre/modules/PlacesDBUtils.sys.mjs",
+ });
+ 
+@@ -946,17 +945,7 @@
+   },
+ 
+   pdfjs: function pdfjs(done) {
+-    done({
+-      version: lazy.PDFJS_VERSION,
+-      enabled: !Services.prefs.getBoolPref("pdfjs.disabled", false),
+-      annotationEditorEnabled:
+-        Services.prefs.getIntPref("pdfjs.annotationEditorMode", 0) !== -1,
+-      enableXfa: Services.prefs.getBoolPref("pdfjs.enableXfa", true),
+-      openPdfAttachmentsInline: Services.prefs.getBoolPref(
+-        "browser.download.open_pdf_attachments_inline",
+-        false
+-      ),
+-    });
++    done({ enabled: false, reason: "not-built" });
+   },
+ 
+   libraryVersions: function libraryVersions(done) {
+--- a/toolkit/moz.configure
++++ b/toolkit/moz.configure
+@@ -973,6 +973,14 @@
+ set_config("MOZ_DAV1D_ASM", dav1d_asm)
+ set_define("MOZ_DAV1D_ASM", dav1d_asm)
+ set_config("MOZ_SYSTEM_AV1", True, when="--with-system-av1")
++
++# PDF.js viewer integration (product selection, separate from PDF printing).
++option("--disable-pdfjs", help="Do not build the PDF.js viewer")
++@depends("--disable-pdfjs")
++def pdfjs_enabled(value):
++    return bool(value)
++set_config("MOZ_PDFJS", pdfjs_enabled)
++set_define("MOZ_PDFJS", True, when=pdfjs_enabled)
+ 
+ # JXL Image Codec Support
+ # ==============================================================
+--- a/toolkit/mozapps/installer/packager.py
++++ b/toolkit/mozapps/installer/packager.py
+@@ -234,6 +234,11 @@
+             # Exclude the disabled diagnostic page's Fluent resource without
+             # changing the pinned translation inputs or other toolkit locales.
+             finder_args["ignore"] = ["**/localization/*/toolkit/about/aboutGlean.ftl"]
++        if not defines.get("MOZ_PDFJS"):
++            finder_args.setdefault("ignore", []).extend([
++                "**/localization/*/toolkit/pdfviewer/**",
++                "**/localization/*/toolkit/about/aboutPDF.ftl",
++            ])
+         finder = PackagerFileFinder(args.source, find_executables=True, **finder_args)
+         if "NO_PKG_FILES" in os.environ:
+             sinkformatter = NoPkgFilesRemover(formatter, args.manifest is not None)
+--- a/widget/android/moz.build
++++ b/widget/android/moz.build
+@@ -89,6 +89,9 @@
+     "XPCOMEventTarget",
+ ]
+ 
++if not CONFIG["MOZ_WEBSPEECH"]:
++    classes_with_WrapForJNI.remove("SpeechSynthesisService")
++
+ natives_from_WrapForJNI = sorted([
+     "GeneratedJNI/{}Natives.h".format(c) for c in classes_with_WrapForJNI
+ ])

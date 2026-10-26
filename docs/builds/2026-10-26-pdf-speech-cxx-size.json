@@ -1,0 +1,1059 @@
+{
+  "source_revision": "d6fd7a4e69b3c2d4550582eb38d2cdbd9cbad79a",
+  "source_archive_sha256": "e218e5c8e645b49df9652813b8a6b8296d0ae6f58f4e3d0c620735acc36e2907",
+  "locale_source": {
+    "repository": "https://github.com/mozilla-l10n/firefox-l10n",
+    "revision": "352d5c0f72bddbb50d1869178eaa85b9c83d095e",
+    "locale": "zh-CN",
+    "locale_tree": "10833dd1a5bcaa629a5c117c55131b0b27c32929",
+    "gecko_revision": "d6fd7a4e69b3c2d4550582eb38d2cdbd9cbad79a"
+  },
+  "build_type": "release",
+  "baseline_aar": {
+    "file": "geckoview-lite-no-glean-sdk35-zh-CN-arm64-release.aar",
+    "size_bytes": 85509542,
+    "sha256": "57bad3cd750abf7a16d60aaa7793e8a9a6142cb34cc5c0e0dd6f0c70d2dc2e6c"
+  },
+  "variants": {
+    "o2": {
+      "mode": "o2",
+      "aar": {
+        "file": "geckoview-trim-o2-sdk35-zh-CN-arm64-release.aar",
+        "size_bytes": 82767120,
+        "sha256": "9f3fb4b1ab4bdad36bba977c85a89951648acd3df94c3c2c763dfc2f557afe85"
+      },
+      "coordinate": "org.mozilla.geckoview:geckoview-default:160.0.20261026144442-SNAPSHOT",
+      "release_host_apk": {
+        "file": "host-release-unsigned.apk",
+        "size_bytes": 197028564,
+        "sha256": "5553db15fb009c48f3e9008a8d2e57dcd8deb5ff74a45604b3a56369f0fa0ad5"
+      },
+      "probe_apk": {
+        "file": "probe.apk",
+        "size_bytes": 198022900,
+        "sha256": "072343841a968af397dfe6ae3e6fd518b7a71ba157007434f7bb3e176e5f0f65"
+      },
+      "configuration": {
+        "ANDROID_COMPILE_SDK_MAJOR": "35",
+        "ANDROID_TARGET_SDK": "30",
+        "MOZ_ANDROID_MIN_SDK_VERSION": "26",
+        "MOZ_UI_LOCALE": "zh-CN",
+        "TARGET_CPU": "aarch64",
+        "MOZ_PDFJS": "",
+        "MOZ_WEBSPEECH": null,
+        "MOZ_DEVTOOLS": "server",
+        "MOZ_WEBRTC": "1",
+        "MOZ_JXL": "1",
+        "MOZ_GLEAN": "",
+        "MOZ_GLEAN_ANDROID": null,
+        "MOZ_CRASHREPORTER": null,
+        "MOZ_DEBUG": null,
+        "MOZ_OPTIMIZE": "1",
+        "MOZ_OPTIMIZE_FLAGS": [
+          "-O2"
+        ],
+        "MOZ_LTO": null,
+        "MOZ_LTO_CFLAGS": null,
+        "MOZ_LTO_LDFLAGS": null,
+        "MOZ_ANDROID_GECKOVIEW_LITE": "1",
+        "MOZ_ARTIFACT_BUILDS": null
+      },
+      "native_libraries": {
+        "libclearkey.so": {
+          "sha256": "08cbdf3c9f957f8969eca15097ff0051cd7471e0281db98baeb73292e2da9132",
+          "size_bytes": 147944,
+          "build_id": "869020ca5790f020f54fdfe53f7461424fd0e2f2",
+          "load_alignments": [
+            16384,
+            16384,
+            16384
+          ],
+          "needed": [
+            "libmozglue.so",
+            "libnss3.so",
+            "liblog.so",
+            "libm.so",
+            "libdl.so",
+            "libc.so"
+          ]
+        },
+        "libfreebl3.so": {
+          "sha256": "902eddf0d3e9f37643250ff4a2e59a46da1dc6af2d698ac9d2e87238ce856444",
+          "size_bytes": 872880,
+          "build_id": "0a7440f00c5b576cbc570ad04c4a71071046ca61",
+          "load_alignments": [
+            16384,
+            16384,
+            16384
+          ],
+          "needed": [
+            "libnss3.so",
+            "liblog.so",
+            "libdl.so",
+            "libc.so"
+          ]
+        },
+        "libgkcodecs.so": {
+          "sha256": "0fcbfcde741656cf158a9e043fa7d6318724de71c38c3274ae815056e5a89ec7",
+          "size_bytes": 6079712,
+          "build_id": "437c08beee99eb3613f321952ebdb2c1ea010bc1",
+          "load_alignments": [
+            16384,
+            16384,
+            16384
+          ],
+          "needed": [
+            "libmozglue.so",
+            "libm.so",
+            "liblog.so",
+            "libdl.so",
+            "libc.so"
+          ]
+        },
+        "liblgpllibs.so": {
+          "sha256": "0623a32523d1eb69ac56cf3cabded4d7112aea6ffbeb1ce61ab5e601e1b50e68",
+          "size_bytes": 176928,
+          "build_id": "c408dcedc68e9cf3def69fa6d1153a6d7841a70b",
+          "load_alignments": [
+            16384,
+            16384,
+            16384
+          ],
+          "needed": [
+            "libmozglue.so",
+            "libm.so",
+            "liblog.so",
+            "libdl.so",
+            "libc.so"
+          ]
+        },
+        "libmozavcodec.so": {
+          "sha256": "4d2d459efdfc51eebff78ba895e3664dcc94db9d1aa8c907615a183c6953f862",
+          "size_bytes": 2393248,
+          "build_id": "0e52bcdad6b7ec4937d8fb71ed4eba09224f0884",
+          "load_alignments": [
+            16384,
+            16384,
+            16384
+          ],
+          "needed": [
+            "libgkcodecs.so",
+            "libmozavutil.so",
+            "liblog.so",
+            "libm.so",
+            "libandroid.so",
+            "libmediandk.so",
+            "libdl.so",
+            "libc.so"
+          ]
+        },
+        "libmozavutil.so": {
+          "sha256": "f95017e448db13110a6ae94e1272e0d3b934e50169b1ffa71fc6c154be157dc1",
+          "size_bytes": 518536,
+          "build_id": "820a1ba90c29005b511bf77f7cf2476426cb9e25",
+          "load_alignments": [
+            16384,
+            16384,
+            16384
+          ],
+          "needed": [
+            "libgkcodecs.so",
+            "liblog.so",
+            "libm.so",
+            "libandroid.so",
+            "libdl.so",
+            "libc.so"
+          ]
+        },
+        "libmozglue.so": {
+          "sha256": "fbc8a4e1842bb5cbd5036bffe8429a6ee487255ac3e628db1019c86d76ff352d",
+          "size_bytes": 1326976,
+          "build_id": "e37d43030e975250fdd7789a937ad8091033a48c",
+          "load_alignments": [
+            16384,
+            16384,
+            16384
+          ],
+          "needed": [
+            "libdl.so",
+            "liblog.so",
+            "libm.so",
+            "libc.so"
+          ]
+        },
+        "libnss3.so": {
+          "sha256": "35f1219427ec91487772a96c7cbd49f2a137436f78f8cb7e309821cb6afb04af",
+          "size_bytes": 2999808,
+          "build_id": "09bcc8c932c0276cde33d4456bd27bc61432bba7",
+          "load_alignments": [
+            16384,
+            16384,
+            16384
+          ],
+          "needed": [
+            "libmozglue.so",
+            "libdl.so",
+            "libm.so",
+            "liblog.so",
+            "libc.so"
+          ]
+        },
+        "libplugin-container.so": {
+          "sha256": "9bc380c624c40cea9f92164075d8dffd77c6caefe3467ef0d5f44e0e954936a8",
+          "size_bytes": 4720,
+          "build_id": "991263c7acb6dfef2c6483c81bd75a7baf737ccd",
+          "load_alignments": [
+            16384,
+            16384,
+            16384
+          ],
+          "needed": [
+            "liblog.so",
+            "libm.so",
+            "libdl.so",
+            "libc.so"
+          ]
+        },
+        "libsoftokn3.so": {
+          "sha256": "25120e9e836c7be75d6649ca3ad3e619c1f6e6c609f0b2c254d4cb4df59a75a1",
+          "size_bytes": 357976,
+          "build_id": "92708004d86d821ef39880b9498df6c1c2780e06",
+          "load_alignments": [
+            16384,
+            16384,
+            16384
+          ],
+          "needed": [
+            "libnss3.so",
+            "liblog.so",
+            "libdl.so",
+            "libc.so"
+          ]
+        },
+        "libxul.so": {
+          "sha256": "0088dd251fd06d5f036abab4b7d2bce07213dcfae08ac7c64454fdc2f1b4111c",
+          "size_bytes": 168544784,
+          "build_id": "cfa39c4d88704e82d43edb9469a54d56d53fc767",
+          "load_alignments": [
+            16384,
+            16384,
+            16384
+          ],
+          "needed": [
+            "libnss3.so",
+            "libgkcodecs.so",
+            "liblgpllibs.so",
+            "libmozglue.so",
+            "liblog.so",
+            "libandroid.so",
+            "libmediandk.so",
+            "libGLESv2.so",
+            "libjnigraphics.so",
+            "libm.so",
+            "libdl.so",
+            "libsync.so",
+            "libc.so"
+          ]
+        }
+      },
+      "devtools_file_count": 477,
+      "devtools_resource_hashes_equal_previous": true,
+      "locale_registrations": [
+        "locale alerts zh-CN zh-CN/locale/zh-CN/alerts/",
+        "locale autoconfig zh-CN zh-CN/locale/zh-CN/autoconfig/",
+        "locale branding zh-CN zh-CN/locale/branding/",
+        "locale browser zh-CN zh-CN/locale/zh-CN/browser/",
+        "locale devtools-shared zh-CN zh-CN/locale/zh-CN/devtools/shared/",
+        "locale global zh-CN zh-CN/locale/zh-CN/global/",
+        "locale global-platform zh-CN zh-CN/locale/zh-CN/global-platform/mac/ os=Darwin",
+        "locale global-platform zh-CN zh-CN/locale/zh-CN/global-platform/unix/ os=LikeUnix os=Android",
+        "locale global-platform zh-CN zh-CN/locale/zh-CN/global-platform/win/ os=WINNT",
+        "locale mozapps zh-CN zh-CN/locale/zh-CN/mozapps/",
+        "locale necko zh-CN zh-CN/locale/zh-CN/necko/",
+        "locale passwordmgr zh-CN zh-CN/locale/zh-CN/passwordmgr/",
+        "locale pipnss zh-CN zh-CN/locale/zh-CN/pipnss/",
+        "locale pippki zh-CN zh-CN/locale/zh-CN/pippki/",
+        "locale places zh-CN zh-CN/locale/zh-CN/places/"
+      ],
+      "checks": {
+        "release_aar": true,
+        "no_pdfjs_or_speech": true,
+        "no_glean_or_reporter": true,
+        "single_zh_CN_locale": true,
+        "devtools_retained": true,
+        "source_staging_aar_both_apks_native_match": true,
+        "source_packaged_xul_build_id_match": true,
+        "elf_and_both_apk_zip_16k": true,
+        "native_dependency_closure": true,
+        "apk_35_30_26": true,
+        "release_maven_components": true,
+        "sources_jar_excludes_removed_java": true
+      }
+    },
+    "os-thinlto": {
+      "mode": "os-thinlto",
+      "aar": {
+        "file": "geckoview-trim-os-thinlto-sdk35-zh-CN-arm64-release.aar",
+        "size_bytes": 74389001,
+        "sha256": "6458653a780711ecf74d74856ba86f62ca2942a5d8f4e6d5baed9bc6784702e4"
+      },
+      "coordinate": "org.mozilla.geckoview:geckoview-default:160.0.20261026145830-SNAPSHOT",
+      "release_host_apk": {
+        "file": "host-release-unsigned.apk",
+        "size_bytes": 173697748,
+        "sha256": "874f8e325d2407cd3d4c4c37c2e5315b475a1b9905b41841bd1d4ac6d7be8e4f"
+      },
+      "probe_apk": {
+        "file": "probe.apk",
+        "size_bytes": 174689965,
+        "sha256": "5f39b610492e57f2d5fe27f4f91d2b8b8c1fdf57f236351dbde60ebf70dc2b1c"
+      },
+      "configuration": {
+        "ANDROID_COMPILE_SDK_MAJOR": "35",
+        "ANDROID_TARGET_SDK": "30",
+        "MOZ_ANDROID_MIN_SDK_VERSION": "26",
+        "MOZ_UI_LOCALE": "zh-CN",
+        "TARGET_CPU": "aarch64",
+        "MOZ_PDFJS": "",
+        "MOZ_WEBSPEECH": null,
+        "MOZ_DEVTOOLS": "server",
+        "MOZ_WEBRTC": "1",
+        "MOZ_JXL": "1",
+        "MOZ_GLEAN": "",
+        "MOZ_GLEAN_ANDROID": null,
+        "MOZ_CRASHREPORTER": null,
+        "MOZ_DEBUG": null,
+        "MOZ_OPTIMIZE": "1",
+        "MOZ_OPTIMIZE_FLAGS": [
+          "-Os"
+        ],
+        "MOZ_LTO": "1",
+        "MOZ_LTO_CFLAGS": [
+          "-flto=thin",
+          "-ffat-lto-objects"
+        ],
+        "MOZ_LTO_LDFLAGS": [
+          "-flto=thin",
+          "-Wl,-plugin-opt=-import-instr-limit=10",
+          "-Wl,-plugin-opt=-import-hot-multiplier=30",
+          "-ffat-lto-objects"
+        ],
+        "MOZ_ANDROID_GECKOVIEW_LITE": "1",
+        "MOZ_ARTIFACT_BUILDS": null
+      },
+      "native_libraries": {
+        "libclearkey.so": {
+          "sha256": "fe17b0e671f73898ca881393582806f1c3480a7229ce46f8ea44def873099cad",
+          "size_bytes": 134576,
+          "build_id": "f50658422bcf0acf43ccfc187b9dbe85265e79a1",
+          "load_alignments": [
+            16384,
+            16384,
+            16384
+          ],
+          "needed": [
+            "libmozglue.so",
+            "libnss3.so",
+            "liblog.so",
+            "libm.so",
+            "libdl.so",
+            "libc.so"
+          ]
+        },
+        "libfreebl3.so": {
+          "sha256": "a32beaa2a88af9036e747b7135c4d9767eed760578f165ddc60899a46327ba21",
+          "size_bytes": 773400,
+          "build_id": "c23cb96f26ee7b8fb2d36c0963f6eaf6489020e3",
+          "load_alignments": [
+            16384,
+            16384,
+            16384
+          ],
+          "needed": [
+            "libnss3.so",
+            "liblog.so",
+            "libdl.so",
+            "libc.so"
+          ]
+        },
+        "libgkcodecs.so": {
+          "sha256": "0469cad5291885980c28220289be0b8a242b7d7089f0caa60e83ec731b53bd8e",
+          "size_bytes": 4856880,
+          "build_id": "40a7b1f1c0577f581d59b4cd09a4d130f0f38b13",
+          "load_alignments": [
+            16384,
+            16384,
+            16384
+          ],
+          "needed": [
+            "libmozglue.so",
+            "libm.so",
+            "liblog.so",
+            "libdl.so",
+            "libc.so"
+          ]
+        },
+        "liblgpllibs.so": {
+          "sha256": "afb5ba67c6e3f73beb1d390d5ea3d118b4cc108677bf47d173afe16cffdf2461",
+          "size_bytes": 166768,
+          "build_id": "b8c9c2b332ac14bb49aee90912ade4880ffca081",
+          "load_alignments": [
+            16384,
+            16384,
+            16384
+          ],
+          "needed": [
+            "libmozglue.so",
+            "libm.so",
+            "liblog.so",
+            "libdl.so",
+            "libc.so"
+          ]
+        },
+        "libmozavcodec.so": {
+          "sha256": "5757357535255fcb0e34262eae54b5e37b2c895885afb12eec4e56a84ce28ccc",
+          "size_bytes": 2132408,
+          "build_id": "46109b79afcb7c974af331624183bc6b3d77c244",
+          "load_alignments": [
+            16384,
+            16384,
+            16384
+          ],
+          "needed": [
+            "libgkcodecs.so",
+            "libmozavutil.so",
+            "liblog.so",
+            "libm.so",
+            "libandroid.so",
+            "libmediandk.so",
+            "libdl.so",
+            "libc.so"
+          ]
+        },
+        "libmozavutil.so": {
+          "sha256": "1fce2661275b968d4fd50dd5b9b69cdfa8cfcaa2ee6c5264643d4ff286c596bc",
+          "size_bytes": 472096,
+          "build_id": "7b014f8a9d49ac3d88b8214506fb1589d3a11874",
+          "load_alignments": [
+            16384,
+            16384,
+            16384
+          ],
+          "needed": [
+            "libgkcodecs.so",
+            "liblog.so",
+            "libm.so",
+            "libandroid.so",
+            "libdl.so",
+            "libc.so"
+          ]
+        },
+        "libmozglue.so": {
+          "sha256": "0a13dc328e0887755eb93bd23eaf7fb2de9e705ba14271afe73abf344046f832",
+          "size_bytes": 1203392,
+          "build_id": "d4765ee3cdb586bf242885deed5bc978a7c7e853",
+          "load_alignments": [
+            16384,
+            16384,
+            16384
+          ],
+          "needed": [
+            "libdl.so",
+            "liblog.so",
+            "libm.so",
+            "libc.so"
+          ]
+        },
+        "libnss3.so": {
+          "sha256": "7327671f6f4b72c76c33938c3f6610ce3d8ffc621bd8ec550bad965d4b48675a",
+          "size_bytes": 2534880,
+          "build_id": "aee381421d81531da084ae5da39969f918fd7f13",
+          "load_alignments": [
+            16384,
+            16384,
+            16384
+          ],
+          "needed": [
+            "libmozglue.so",
+            "libdl.so",
+            "libm.so",
+            "liblog.so",
+            "libc.so"
+          ]
+        },
+        "libplugin-container.so": {
+          "sha256": "49b0c0e97aeff2787b768b91f99a7978f391e32ad956a4358162b05d1a0476ff",
+          "size_bytes": 4720,
+          "build_id": "f533744e0a1cd89d17d90205be6a2fd829f0a567",
+          "load_alignments": [
+            16384,
+            16384,
+            16384
+          ],
+          "needed": [
+            "liblog.so",
+            "libm.so",
+            "libdl.so",
+            "libc.so"
+          ]
+        },
+        "libsoftokn3.so": {
+          "sha256": "3633fad0d0995124a8ad577d29bea9680172f058d1ed44f2dca8ce590586aebc",
+          "size_bytes": 335312,
+          "build_id": "cf8e50ca764c724cdfa57cfd6354fbdfef586522",
+          "load_alignments": [
+            16384,
+            16384,
+            16384
+          ],
+          "needed": [
+            "libnss3.so",
+            "liblog.so",
+            "libdl.so",
+            "libc.so"
+          ]
+        },
+        "libxul.so": {
+          "sha256": "60b5462031090acf157ae6532bac8a637d97e944a67b3433ea241033b12bf495",
+          "size_bytes": 147474944,
+          "build_id": "f891c9d3204decbd86d0c5a526df60c1bf2dc003",
+          "load_alignments": [
+            16384,
+            16384,
+            16384
+          ],
+          "needed": [
+            "libnss3.so",
+            "libgkcodecs.so",
+            "liblgpllibs.so",
+            "libmozglue.so",
+            "liblog.so",
+            "libandroid.so",
+            "libmediandk.so",
+            "libGLESv2.so",
+            "libjnigraphics.so",
+            "libm.so",
+            "libdl.so",
+            "libsync.so",
+            "libc.so"
+          ]
+        }
+      },
+      "devtools_file_count": 477,
+      "devtools_resource_hashes_equal_previous": true,
+      "locale_registrations": [
+        "locale alerts zh-CN zh-CN/locale/zh-CN/alerts/",
+        "locale autoconfig zh-CN zh-CN/locale/zh-CN/autoconfig/",
+        "locale branding zh-CN zh-CN/locale/branding/",
+        "locale browser zh-CN zh-CN/locale/zh-CN/browser/",
+        "locale devtools-shared zh-CN zh-CN/locale/zh-CN/devtools/shared/",
+        "locale global zh-CN zh-CN/locale/zh-CN/global/",
+        "locale global-platform zh-CN zh-CN/locale/zh-CN/global-platform/mac/ os=Darwin",
+        "locale global-platform zh-CN zh-CN/locale/zh-CN/global-platform/unix/ os=LikeUnix os=Android",
+        "locale global-platform zh-CN zh-CN/locale/zh-CN/global-platform/win/ os=WINNT",
+        "locale mozapps zh-CN zh-CN/locale/zh-CN/mozapps/",
+        "locale necko zh-CN zh-CN/locale/zh-CN/necko/",
+        "locale passwordmgr zh-CN zh-CN/locale/zh-CN/passwordmgr/",
+        "locale pipnss zh-CN zh-CN/locale/zh-CN/pipnss/",
+        "locale pippki zh-CN zh-CN/locale/zh-CN/pippki/",
+        "locale places zh-CN zh-CN/locale/zh-CN/places/"
+      ],
+      "checks": {
+        "release_aar": true,
+        "no_pdfjs_or_speech": true,
+        "no_glean_or_reporter": true,
+        "single_zh_CN_locale": true,
+        "devtools_retained": true,
+        "source_staging_aar_both_apks_native_match": true,
+        "source_packaged_xul_build_id_match": true,
+        "elf_and_both_apk_zip_16k": true,
+        "native_dependency_closure": true,
+        "apk_35_30_26": true,
+        "release_maven_components": true,
+        "sources_jar_excludes_removed_java": true
+      }
+    }
+  },
+  "size_comparison": {
+    "feature_removal_bytes": 2742422,
+    "compiler_combination_bytes": 8378119,
+    "compiler_combination_percent": 10.122520875439426,
+    "total_bytes": 11120541,
+    "total_percent": 13.005029310062262
+  },
+  "tools": {
+    "clang": "clang version 22.1.8 (taskcluster-Qrcp9ntKSbi2KuTGHcCCWg)",
+    "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+    "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+    "java": "openjdk version \"17.0.20.1\" 2026-08-18"
+  },
+  "toolchain": {
+    "ndk": "30.0.15729638-beta2",
+    "gradle": "9.8.1",
+    "agp": "9.4.1",
+    "java": "17.0.20.1+1",
+    "build_tools": "37.0.0",
+    "python": "3.12.14",
+    "uv": "0.13.0"
+  },
+  "patches": [
+    {
+      "path": "patches/sdk35/0001-sdk35-target30-platform.patch",
+      "sha256": "45c10dde83f639fae7e9115c3e9a32cafc7b1bed11a139b5de4ceddab77c3858"
+    },
+    {
+      "path": "patches/sdk35/0002-sdk35-cursor-blink-default.patch",
+      "sha256": "cf51a7afcf386f6e7cb348c50472efc0bf0a3b93c449241c0f05464b35e2ec46"
+    },
+    {
+      "path": "patches/sdk35/0003-route-build-dependencies.patch",
+      "sha256": "c73d32a3f1f786b234f4a1ca1c29514fe1a1f0fed4339968121c1a2191dd78c4"
+    },
+    {
+      "path": "patches/sdk35/0004-sdk35-accessibility-fallback.patch",
+      "sha256": "5500513bf8b1ce6c09bd6576a05f26cb7cc26afdefb04b1b8d3401d4d9388ea3"
+    },
+    {
+      "path": "patches/sdk35/0005-optional-android-hls.patch",
+      "sha256": "0545dfd372b763659e66fd0bf600a407827016971bc28a809e5550998678b887"
+    },
+    {
+      "path": "patches/sdk35/0006-sdk35-core-dependency.patch",
+      "sha256": "b5bb81c7227595f0371c37d673b818e2d70bafcafa8eeab3b0fab572f7a3b65a"
+    },
+    {
+      "path": "patches/lite-zh-CN/0001-remove-crashreporter-java.patch",
+      "sha256": "9d8131979fd4df84721f28a0e09faa0d86b1bc732226815dc7bd993127c6a926"
+    },
+    {
+      "path": "patches/lite-zh-CN/0002-remove-reporter-js-resources.patch",
+      "sha256": "9f5e793503dc2e7688cd5877a5f0aef3b3754c3bf895b6489530293319ce2335"
+    },
+    {
+      "path": "patches/lite-zh-CN/0003-single-locale-source-build.patch",
+      "sha256": "2a6a022c31cc7f2fc26bca1fa398ec74145fc611c6c5b839a53db93548a97447"
+    },
+    {
+      "path": "patches/no-glean-release/0001-no-glean-backend-and-release.patch",
+      "sha256": "362a8e39088e5b753f6fd730041c6f38e214dcfeda5fcc4d685b61577f6832ff"
+    },
+    {
+      "path": "patches/pdf-speech/0001-remove-pdfjs-webspeech.patch",
+      "sha256": "a67f88398fd4777c051b7c33fc2f65f7991c22d9d8855e36f35e6e73be8db640"
+    }
+  ],
+  "source_replay": [
+    {
+      "path": "Cargo.lock",
+      "removed": false,
+      "sha256": "e546bf5af6633629feb8c4cba0f9a6a9f0678508b5e8567d19bf265f0adda1bc"
+    },
+    {
+      "path": "build/moz.configure/android-sdk.configure",
+      "removed": false,
+      "sha256": "b433265b9465300b80097f0a69788d4eda98ce8b32cf7ed19a32ae4f0175eab1"
+    },
+    {
+      "path": "config/config.mk",
+      "removed": false,
+      "sha256": "7eaa2990cb40ac3ffff616a528b1fa3b9eab50da45cab9dfb2094140aa53c45a"
+    },
+    {
+      "path": "docshell/base/nsAboutRedirector.cpp",
+      "removed": false,
+      "sha256": "32e5925c275f07f63bdf8e2325dbc2ac1c2801c026122b6ab846db46162019e3"
+    },
+    {
+      "path": "docshell/build/components.conf",
+      "removed": false,
+      "sha256": "72cbf383cdbbee05abc0f8ee2069fd83f5a2deb7edb3f25ef201fab5e84ecdfd"
+    },
+    {
+      "path": "gfx/wgpu_bindings/Cargo.toml",
+      "removed": false,
+      "sha256": "c6a0d9a68d96c3eaa02774d93d6c30371a880dd3b354cb88415fe59df99c30d5"
+    },
+    {
+      "path": "gfx/wr/webrender/Cargo.toml",
+      "removed": false,
+      "sha256": "07776cb2b54a00ea13a5f9ccac85ed6bd110bc2a8b698f9f41dd7b6d3fa001ac"
+    },
+    {
+      "path": "gfx/wr/webrender/src/telemetry.rs",
+      "removed": false,
+      "sha256": "489f5da623dd76de6b2636944902c68469a4fdbe1f94569f17330ae4180d23fe"
+    },
+    {
+      "path": "gfx/wr/wr_glyph_rasterizer/Cargo.toml",
+      "removed": false,
+      "sha256": "22aa4e800f7b0c03eb5d37a0a15a01032729677da9d10de075d242b2bc99e23e"
+    },
+    {
+      "path": "gfx/wr/wr_glyph_rasterizer/src/telemetry.rs",
+      "removed": false,
+      "sha256": "7afa537d27addb1474f229826dc73b22e17844bb55ef9c9d1b116ae5d88b610f"
+    },
+    {
+      "path": "mobile/android/app/geckoview-prefs.js",
+      "removed": false,
+      "sha256": "c318fa5d5503d4ca39b61adcf1c6ba51fcc7e94f225996e7f0d7b723feaa0e6f"
+    },
+    {
+      "path": "mobile/android/geckoview/build.gradle",
+      "removed": false,
+      "sha256": "6a9da3272ea6d8062eb099e6fc7df8d2e61c034a918bd6d23003dfbd9ba8003f"
+    },
+    {
+      "path": "mobile/android/geckoview/src/main/AndroidManifest_overlay.jinja",
+      "removed": false,
+      "sha256": "b37c632b44a5a5dac515162a173a4af4b59245f475b2b708535afbbc9c79d8bb"
+    },
+    {
+      "path": "mobile/android/geckoview/src/main/aidl/org/mozilla/gecko/crashhelper/ICrashHelper.aidl",
+      "removed": true,
+      "sha256": null
+    },
+    {
+      "path": "mobile/android/geckoview/src/main/java/org/mozilla/gecko/GeckoAppShell.java",
+      "removed": false,
+      "sha256": "c0a93ce72e7d7e42da7d6780f5d53b40a53b78a2b9087cfe9fc258ce1ca6ed6e"
+    },
+    {
+      "path": "mobile/android/geckoview/src/main/java/org/mozilla/geckoview/GeckoRuntime.java",
+      "removed": false,
+      "sha256": "b29adeebca8ea1383d89c2f731108007661c8b4648011acb94c348b261b47218"
+    },
+    {
+      "path": "mobile/android/geckoview/src/main/java/org/mozilla/geckoview/GeckoRuntimeSettings.java",
+      "removed": false,
+      "sha256": "8d473a1be023496bba34b28654fc56ac373d8018ace335120cbd737fdf232bc8"
+    },
+    {
+      "path": "mobile/android/geckoview/src/main/java/org/mozilla/geckoview/GeckoSession.java",
+      "removed": false,
+      "sha256": "a28d317a1b970013250b715b0a35c135db80021b10f7b51d6f86a16f8fe5de36"
+    },
+    {
+      "path": "mobile/android/geckoview/src/main/java/org/mozilla/geckoview/SessionAccessibility.java",
+      "removed": false,
+      "sha256": "66230125f180b242caddb5825eecbdf67b333d63b8827b9852c7fa2cd8ee4603"
+    },
+    {
+      "path": "mobile/android/gradle/mozconfig.gradle",
+      "removed": false,
+      "sha256": "be98b0220991faadf2524ea2db86ff44bec8cf04b6edc3ab72b93e8f06fc0d95"
+    },
+    {
+      "path": "mobile/android/gradle/with_gecko_binaries.gradle",
+      "removed": false,
+      "sha256": "ae055559f90a4cb07308d6001ce770f6424d2850faae3391a56a0507ee5e4137"
+    },
+    {
+      "path": "mobile/android/installer/package-manifest.in",
+      "removed": false,
+      "sha256": "5d5ba4600c4bd250caa9a1dd1e9e646920f97e6911d719f4005bce54e25fe99c"
+    },
+    {
+      "path": "mobile/android/moz.configure",
+      "removed": false,
+      "sha256": "c822b0d40a362f2288ac2c7220ab9e3cd8c9c9b7878a3ee0079b85d4cbdab4af"
+    },
+    {
+      "path": "mobile/shared/components/geckoview/GeckoViewStartup.sys.mjs",
+      "removed": false,
+      "sha256": "a6e6519276e747e54e885f3e48b316de0ec1fbeb9dcd4a434e0d5492972ba6fe"
+    },
+    {
+      "path": "mobile/shared/modules/geckoview/GeckoViewContent.sys.mjs",
+      "removed": false,
+      "sha256": "3bca31b7de56249afb44a873c2a713cc0978ae92e749f5af616c61a0e2d2c05e"
+    },
+    {
+      "path": "mobile/shared/modules/geckoview/moz.build",
+      "removed": false,
+      "sha256": "d1fbaf32151fc4394be6f80e27f179fc881dd8cbbb94f2693227d99158293248"
+    },
+    {
+      "path": "toolkit/actors/moz.build",
+      "removed": false,
+      "sha256": "4e6f55d2573ce6454345b853795a3ec96d3a937c6f36878c1d119d83faf478a0"
+    },
+    {
+      "path": "toolkit/components/glean/api/Cargo.toml",
+      "removed": false,
+      "sha256": "562a1ca2b29779fb5fb4cafb5f76c87426c418275a3f2e6ae4ce2b22edfa06dd"
+    },
+    {
+      "path": "toolkit/components/glean/api/src/lib.rs",
+      "removed": false,
+      "sha256": "d1ace778b0f9d1a65e55c918f374c653949fc8627d1b126e015091053e4d7a0d"
+    },
+    {
+      "path": "toolkit/components/glean/build_scripts/glean_parser_ext/run_glean_parser.py",
+      "removed": false,
+      "sha256": "51b5391ae92e2918ac900c9a3b36192e67f7ccc20af099fb4e67de6efc2ff71a"
+    },
+    {
+      "path": "toolkit/components/glean/build_scripts/glean_parser_ext/rust.py",
+      "removed": false,
+      "sha256": "9cca1046e006b20a03a98d2e40620a98c7ca0bce0fb89b04240c0cdc102ae514"
+    },
+    {
+      "path": "toolkit/components/glean/build_scripts/glean_parser_ext/rust_no_glean.py",
+      "removed": false,
+      "sha256": "1237ae5cdbdc157ba614f2a9146315c0380464dfd151148b1f533e7b5992d106"
+    },
+    {
+      "path": "toolkit/components/glean/ipc/FOGIPC.cpp",
+      "removed": false,
+      "sha256": "2fd7772d55869db5ee71ad692b52ed543dc10baee741749c0734d83906fca337"
+    },
+    {
+      "path": "toolkit/components/glean/moz.build",
+      "removed": false,
+      "sha256": "81f73c8e4adb8a82711fb5712ff17dc8129873ce59bedd8ee9ea817b959df89c"
+    },
+    {
+      "path": "toolkit/components/glean/no_glean/fog_ffi_generated.h",
+      "removed": false,
+      "sha256": "bc7dcf99dc88e9d280a31166bf0ae58810e2cb1bdbfc3412d0991371f70ac6f6"
+    },
+    {
+      "path": "toolkit/components/glean/no_glean/jog_ffi_generated.h",
+      "removed": false,
+      "sha256": "a5993e4ddf198d59facaa75209ea6411e135a14eb8e37f9132342d8b4fdb5cfe"
+    },
+    {
+      "path": "toolkit/components/glean/xpcom/FOG.cpp",
+      "removed": false,
+      "sha256": "bedea811effb6aa45cfedd9067ad0c873c5cdce2b987cab35294b387457a9d53"
+    },
+    {
+      "path": "toolkit/components/moz.build",
+      "removed": false,
+      "sha256": "b0fb76858106d5fd336b6c06fa8c0a7caa50d434bc629fc166f0efaa18847d7e"
+    },
+    {
+      "path": "toolkit/content/jar.mn",
+      "removed": false,
+      "sha256": "e3fc2fb8ed0122083039ac529917520053d7740d20db097d288a7f7e97d8a75a"
+    },
+    {
+      "path": "toolkit/library/rust/shared/Cargo.toml",
+      "removed": false,
+      "sha256": "d23212e23f4b2d49554b91234ca2c5f4ccadc9333d75325c20ba09cbf23f5bc7"
+    },
+    {
+      "path": "toolkit/library/rust/shared/lib.rs",
+      "removed": false,
+      "sha256": "00b919099b30e80b7bb5a3e3cc7e4522b7fc91fa756ddd22b90dd5e2f4358993"
+    },
+    {
+      "path": "toolkit/locales/gen_multilocale.py",
+      "removed": false,
+      "sha256": "bac6b2501175c77ff0c87c0a423d8b3de176ad5a5f856eea59ecdb41d7a25922"
+    },
+    {
+      "path": "toolkit/locales/jar.mn",
+      "removed": false,
+      "sha256": "0e562e128ca312a800c02bc5739175a8291eedc4a38d47d054e8e84d6e4c8fbd"
+    },
+    {
+      "path": "toolkit/locales/moz.build",
+      "removed": false,
+      "sha256": "e67b0f55b4902306738358ef4936cc1cd0538bb75b8c386676c74951e0752ec0"
+    },
+    {
+      "path": "toolkit/modules/ActorManagerParent.sys.mjs",
+      "removed": false,
+      "sha256": "5ea7933f43b05ebbfad6ee05a748886e834d8a495e3dab99f7299a6d660dc46f"
+    },
+    {
+      "path": "toolkit/modules/Troubleshoot.sys.mjs",
+      "removed": false,
+      "sha256": "7cbe926a4a7a3aa7968a2af8a26a06b30ae57cf365d39de1e7c2f40b9a509a0b"
+    },
+    {
+      "path": "toolkit/moz.configure",
+      "removed": false,
+      "sha256": "c23bf68b09e05df39944abcf8b937ef65e2afbb222b75ab1bfdbc061d1aad00f"
+    },
+    {
+      "path": "toolkit/mozapps/installer/packager.mk",
+      "removed": false,
+      "sha256": "1bd4d45307136fac2763b6e3db5871de19fd71241650a09b5ccab4a7b7639daf"
+    },
+    {
+      "path": "toolkit/mozapps/installer/packager.py",
+      "removed": false,
+      "sha256": "66c87eb84d136eb81a8ab54b9860424d95a5f03cf042bc23c97ca63e672b2050"
+    },
+    {
+      "path": "widget/android/moz.build",
+      "removed": false,
+      "sha256": "1cc27bb5a27fc3a4f8e5326944e61bd17542663c6e3548ef002371f3fb433787"
+    }
+  ],
+  "patch_replay": {
+    "patch_count": 11,
+    "source_path_count": 50,
+    "fuzz": 0,
+    "matches_actual_source": true
+  },
+  "device": {
+    "model": "Vivo V2536A",
+    "android_version": "16",
+    "abi": "arm64-v8a",
+    "physical_device": true,
+    "task_created_probe_apps_removed": true,
+    "scope": "one device, local assets, minimal functional checks; not comprehensive compatibility/performance"
+  },
+  "runtime_results": {
+    "baseline": {
+      "devtools_handshake": true,
+      "list_tabs": true,
+      "target": true,
+      "console_evaluation": true,
+      "thread_and_inspector_actors": true,
+      "runtime_probe": {
+        "checks": {
+          "dom": true,
+          "canvas": true,
+          "webgl": true,
+          "wasm": true,
+          "indexedDB": true,
+          "webrtc": true
+        },
+        "timingsMs": {
+          "layout": 45,
+          "canvas": 4
+        },
+        "speechSynthesis": true,
+        "passed": true
+      }
+    },
+    "o2": {
+      "devtools_handshake": true,
+      "list_tabs": true,
+      "target": true,
+      "console_evaluation": true,
+      "thread_and_inspector_actors": true,
+      "runtime_probe": {
+        "checks": {
+          "dom": true,
+          "canvas": true,
+          "webgl": true,
+          "wasm": true,
+          "indexedDB": true,
+          "webrtc": true,
+          "speechRemoved": true
+        },
+        "timingsMs": {
+          "layout": 34,
+          "canvas": 3
+        },
+        "speechSynthesis": false,
+        "passed": true
+      },
+      "pdf_external_response": {
+        "verified": true,
+        "content_type": "application/pdf",
+        "content_length": 414
+      }
+    },
+    "os-thinlto": {
+      "devtools_handshake": true,
+      "list_tabs": true,
+      "target": true,
+      "console_evaluation": true,
+      "thread_and_inspector_actors": true,
+      "runtime_probe": {
+        "checks": {
+          "dom": true,
+          "canvas": true,
+          "webgl": true,
+          "wasm": true,
+          "indexedDB": true,
+          "webrtc": true,
+          "speechRemoved": true
+        },
+        "timingsMs": {
+          "layout": 37,
+          "canvas": 2
+        },
+        "speechSynthesis": false,
+        "passed": true
+      },
+      "pdf_external_response": {
+        "verified": true,
+        "content_type": "application/pdf",
+        "content_length": 414
+      }
+    }
+  },
+  "compiler_evidence": {
+    "cpp_translation_unit": "dom/base/Document.cpp",
+    "actual_cpp_options": [
+      "-Os",
+      "-flto=thin",
+      "-ffat-lto-objects"
+    ],
+    "configured_link_options": [
+      "-flto=thin",
+      "-Wl,-plugin-opt=-import-instr-limit=10",
+      "-Wl,-plugin-opt=-import-hot-multiplier=30",
+      "-ffat-lto-objects"
+    ],
+    "fat_lto_object": "mozglue/interposers/Unified_cpp_mozglue_interposers0.o",
+    "fat_lto_section": ".llvm.lto",
+    "cross_language_lto": false,
+    "rust_configuration_changed": false,
+    "speech_in_xul_linker_input": false,
+    "generated_speech_jni_files_present": false
+  },
+  "retained": [
+    "DevTools server",
+    "WebRTC",
+    "JXL",
+    "hyphenation dictionaries",
+    "PDF printing/generation",
+    "stateless metric compatibility interfaces",
+    "old Telemetry",
+    "generic CrashMonitor"
+  ],
+  "limitations": [
+    "Firefox160.0a1 source, not an official stable release",
+    "NDK r30-beta2",
+    "no full site/media/WebRTC call/IndexedDB read-write coverage",
+    "no startup/PSS/energy/whole-browser benchmark",
+    "no 4KB/16KB page-size device matrix",
+    "dynamic loading not implemented or tested",
+    "PDF.js viewer and PDF-specific remote reftest unavailable; host handles external response",
+    "probe-rdp.py requires page probe completion; no automatic readiness wait"
+  ],
+  "build_evidence": {
+    "o2": {
+      "native": "trim-o2-native.log",
+      "publication": "trim-o2-publication.log",
+      "host": "trim-o2-smoke-final.log",
+      "provenance": "trim-o2-full-verification.log",
+      "device": "trim-o2-device-final.log"
+    },
+    "os-thinlto": {
+      "native": "trim-os-thinlto-native.log",
+      "publication": "trim-os-thinlto-publication.log",
+      "host": "trim-os-thinlto-smoke.log",
+      "provenance": "trim-os-thinlto-full-verification.log",
+      "device": "trim-os-thinlto-device-final.log"
+    }
+  },
+  "review": {
+    "independent_read_only_review": true,
+    "critical": 0,
+    "important": 0,
+    "deferred_minor": [
+      "RDP probe requires TRIM_PROBE readiness; automatic bounded wait not implemented"
+    ],
+    "scope": "source closure, patch/source digests, artifacts and device evidence/report consistency; no rebuild"
+  }
+}

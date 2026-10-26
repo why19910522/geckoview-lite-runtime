@@ -2,7 +2,7 @@
 
 基于 Gecko/GeckoView 源码定制的 Android 浏览器运行时方案：裁剪可选功能，并提供随应用打包和可选的动态加载两种接入方式。
 
-**当前阶段：已生成 SDK35 Lite / 无 Glean 后端 / 无 Crash reporter / zh-CN Release AAR。** 已完成 optimized non-debug native 构建、Release AAR 与独立 targetSdk30 Release 宿主编译消费验证；UI 语言包仅简体中文，设备运行和动态加载尚未验证。项目不是 Mozilla 官方产品。
+**当前阶段：已生成 70.94 MiB 的 arm64 Release AAR。** 保留 DevTools，移除 PDF.js、Web Speech、Glean SDK 后端和 Crash reporter，开启 Lite，仅保留 zh-CN UI。相同裁剪源码下，C/C++ `-Os + ThinLTO` 比 `-O2` AAR 减少 10.12%；compileSdk35、targetSdk30、minSdk26 不变。已通过独立宿主编译和一台 Android 16 真机的页面、远程调试及 PDF 外部响应检查。动态加载与全面兼容性尚未验证，项目不是 Mozilla 官方产品。
 
 ## 设计原则
 
@@ -17,6 +17,7 @@
 
 | 文档 | 内容 |
 | --- | --- |
+| [PDF.js / Speech 裁剪与 C++ 优化](docs/builds/2026-10-26-pdf-speech-cxx-size.md) | 当前 AAR、同源码体积对照、DevTools 真机证据、裁剪边界和验证限制 |
 | [无 Glean 中文 Release AAR](docs/builds/2026-10-26-no-glean-release-zh-CN.md) | 当前变体、SDK 后端移除、Release 来源、产物摘要和实际验证范围 |
 | [Lite 中文 AAR](docs/builds/2026-10-23-lite-zh-CN.md) | 上一版 Debug 变体、reporter 移除、中文打包和体积对比 |
 | [静态构建记录](docs/builds/2026-10-23-sdk35-static.md) | 实际补丁、工具链、AAR/APK 摘要、成功闭包与未通过范围 |
@@ -29,4 +30,4 @@
 | [决策记录](docs/decisions.md) | 已确认要求、方案默认选择及后续需要确认的产品参数 |
 | [调研版本记录](upstream-research.json) | 调研使用的上游仓库和不可变修订 |
 
-仓库保存方案、可重放源码补丁、构建配置和静态验证宿主；完整上游源码、构建产物及签名私钥留在 ignored 本机目录。当前 Release 变体通过额外源码补丁移除 Glean SDK/存储/上传/Trace 后端及 Crash reporter，保留无操作指标兼容接口和 WebRTC，HLS/Media3 继续关闭。旧基线记录保留；上游聚合示例和设备运行不属于已通过结论。
+仓库保存方案、可重放源码补丁、构建配置和静态验证宿主；完整上游源码、构建产物及签名私钥留在 ignored 本机目录。当前变体保留无操作指标兼容接口、旧 Telemetry、WebRTC、JXL、断词词典和 PDF 打印/生成；HLS/Media3 继续关闭。PDF 查看需由宿主接管外部响应。旧基线记录保留；上游聚合示例、全站性能和多设备兼容性不属于已通过结论。

@@ -58,3 +58,9 @@ configure 通过后核对 `config.status.json` 的 SDK/ABI 参数，不能只看
 使用 `mozconfig-sdk35-lite-no-glean-release-zh-CN-arm64`，依次应用 `sdk35`、`lite-zh-CN`、`no-glean-release` 三组补丁，固定相同翻译和工具环境，使用独立 objdir。产品补丁移除 SDK 后端并改为发布 Gradle Release 组件；必须 `--disable-glean`。旧变体需在仅应用各自补丁的独立源码目录重建，不能将旧 mozconfig 用在此最终产品源码上。
 
 完整命令、无操作兼容层边界及实际摘要见[Release 构建记录](../docs/builds/2026-10-26-no-glean-release-zh-CN.md)。最后执行 `checkReleaseAarMetadata`、`assembleRelease` 和 `publishReleasePublicationToMavenRepository`；不能重命名旧 Debug AAR 冒充 Release。
+
+## 无 PDF.js / Web Speech，保留 DevTools
+
+在上述三组补丁之后应用 `patches/pdf-speech/series`。当前推荐配置为 `mozconfig-sdk35-trim-os-thinlto-zh-CN-arm64`；`mozconfig-sdk35-trim-o2-zh-CN-arm64` 是相同裁剪源码的体积对照。两版使用独立 objdir、相同工具链与固定翻译，完整执行 configure → pre-export → export → binaries → merge-zh-CN → misc → libs → stage-package → Release 发布。
+
+新增 `--disable-pdfjs`，使用上游 `--disable-webspeech`；产品补丁同时移除启动入口、资源及 Speech Java/JNI 生成。DevTools server 保留。优化版使用 C/C++ `-Os` 和 `--enable-lto=thin`，Rust 维持原配置，不启用跨语言 LTO。实际编译选项、AAR 摘要及设备检查见[本轮构建记录](../docs/builds/2026-10-26-pdf-speech-cxx-size.md)。旧配置只能在对应补丁阶段的源码工作区使用。
