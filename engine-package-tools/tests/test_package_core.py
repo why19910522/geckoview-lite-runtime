@@ -13,6 +13,8 @@ class Packages(unittest.TestCase):
   cls.glue=cls.root/'libmozglue.so'
   subprocess.run([str(CLANG),'--target=aarch64-linux-android26','-fuse-ld=lld','-nostdlib','-shared','-Wl,-soname,libmozglue.so','-Wl,--build-id=sha1','-Wl,-z,max-page-size=16384',str(src),'-o',str(cls.glue)],check=True,capture_output=True)
   src.write_text('extern int fixture(void); int second(void){return fixture();}')
+  cls.bootstrap=cls.root/'libgeckolite_bootstrap.so'
+  subprocess.run([str(CLANG),'--target=aarch64-linux-android26','-fuse-ld=lld','-nostdlib','-shared','-Wl,-soname,libgeckolite_bootstrap.so','-Wl,--build-id=sha1','-Wl,-z,max-page-size=16384',str(src),'-o',str(cls.bootstrap)],check=True,capture_output=True)
   cls.xul=cls.root/'libxul.so'
   subprocess.run([str(CLANG),'--target=aarch64-linux-android26','-fuse-ld=lld','-nostdlib','-shared','-Wl,-soname,libxul.so','-Wl,--build-id=sha1','-Wl,-z,max-page-size=16384',str(src),'-L'+str(cls.root),'-lmozglue','-o',str(cls.xul)],check=True,capture_output=True)
  @classmethod
@@ -27,14 +29,16 @@ class Packages(unittest.TestCase):
    if duplicate:z.writestr('classes.jar',b'ambiguous')
   return p
  def pack(self,p,out):
-  return subprocess.run([sys.executable,str(TOOL),'--aar',str(p),'--output',str(out),'--private-key',str(self.key),'--key-id','local-test','--revision','d6fd7a4e69b3c2d4550582eb38d2cdbd9cbad79a','--profile','lite-zh-CN-no-glean-no-pdf-speech','--sequence','1'],capture_output=True,text=True)
+  return subprocess.run([sys.executable,str(TOOL),'--aar',str(p),'--output',str(out),'--private-key',str(self.key),'--key-id','local-test','--revision','d6fd7a4e69b3c2d4550582eb38d2cdbd9cbad79a','--profile','lite-zh-CN-no-glean-no-pdf-speech','--sequence','1','--bootstrap',str(self.bootstrap)],capture_output=True,text=True)
  def test_split_bytes_signature_and_16k_mapping(self):
   with tempfile.TemporaryDirectory() as t:
    root=Path(t);p=self.fixture(root);out=root/'out';r=self.pack(p,out);self.assertEqual(r.returncode,0,r.stderr)
    with zipfile.ZipFile(out/'bridge.aar') as bridge:
-    self.assertFalse(any(n.startswith('jni/') or n=='assets/omni.ja' for n in bridge.namelist()))
+    self.assertEqual([n for n in bridge.namelist() if n.startswith('jni/')],['jni/arm64-v8a/libgeckolite_bootstrap.so'])
+    self.assertNotIn('assets/omni.ja',bridge.namelist())
     self.assertEqual(bridge.read('classes.jar'),b'bridge classes')
     contract=json.loads(bridge.read('assets/geckolite/host-contract.json'))
+    self.assertLess(contract['nativeLoadOrder'].index('libmozglue.so'),contract['nativeLoadOrder'].index('libxul.so'))
    with zipfile.ZipFile(out/'core-package.zip') as package:
     self.assertEqual(set(package.namelist()),{'manifest.json','manifest.sig','core.apk'})
     manifest=package.read('manifest.json');m=json.loads(manifest);sig=json.loads(package.read('manifest.sig'))
@@ -50,7 +54,7 @@ class Packages(unittest.TestCase):
      for info in z.infolist():
       if info.filename.endswith('.so'):
        header=core[info.header_offset:info.header_offset+30];nl,el=struct.unpack_from('<HH',header,26)
-       self.assertEqual((info.header_offset+30+nl+el)%16384,0);self.assertEqual(info.compress_type,zipfile.ZIP_STORED)
+       self.assertEqual((info.header_offset+30+nl+el)%16384,0);self.assertEqual(info.compress_type,zipfile.ZIP_STORED);self.assertEqual(contract['nativeOffsets'][Path(info.filename).name],info.header_offset+30+nl+el)
  def test_missing_native_dependency_does_not_publish(self):
   with tempfile.TemporaryDirectory() as t:
    root=Path(t);out=root/'out';r=self.pack(self.fixture(root,missing=True),out);self.assertNotEqual(r.returncode,0);self.assertIn('dependency',r.stderr.lower());self.assertFalse((out/'bridge.aar').exists())

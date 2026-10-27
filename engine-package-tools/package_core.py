@@ -89,7 +89,8 @@ def add_aligned(z, name, data, alignment=4):
     if pad:info.extra = struct.pack('<HH', 0xffff, pad-4) + b'\0'*(pad-4)
     z.writestr(info, data)
 
-def split(aar, output, key, key_id, revision, profile, sequence, pom=None):
+def split(aar, output, key, key_id, revision, profile, sequence, pom=None, bootstrap=None, resource_fd=900):
+    if not 64 <= resource_fd <= 1023:raise ValueError('Resource FD must be between 64 and 1023')
     if not re.fullmatch('[A-Za-z0-9._-]{1,32}', key_id):raise ValueError('Invalid key ID')
     if not re.fullmatch('[a-f0-9]{40}', revision):raise ValueError('Invalid revision')
     if not re.fullmatch('[A-Za-z0-9-]{1,80}', profile):raise ValueError('Invalid profile')
@@ -115,12 +116,30 @@ def split(aar, output, key, key_id, revision, profile, sequence, pom=None):
         if info['soname'] != Path(name).name and not (Path(name).name == 'libplugin-container.so' and info['soname'] is None and info['executable']):raise ValueError('ELF SONAME mismatch')
         missing = set(info['needed']) - names - SYSTEM_LIBS
         if missing:raise ValueError('Missing native dependency: '+','.join(sorted(missing)))
+    if bootstrap is None:raise ValueError('Bridge bootstrap required')
+    bootstrap_data=bootstrap.read_bytes();bootstrap_info=elf_info(bootstrap_data)
+    if bootstrap_info['soname'] != 'libgeckolite_bootstrap.so' or set(bootstrap_info['needed'])-SYSTEM_LIBS:
+        raise ValueError('Invalid bridge bootstrap')
+    bridge['jni/arm64-v8a/libgeckolite_bootstrap.so']=bootstrap_data
     # Hash all non-engine entries as a length-framed contract; includes classes,
     # generated BuildConfig/JNI signatures, Android resources and service manifest.
     h = hashlib.sha256()
     for name, data in sorted(bridge.items()):
         nb=name.encode();h.update(struct.pack('>I',len(nb)));h.update(nb);h.update(hashlib.sha256(data).digest())
     fingerprint=h.hexdigest()
+    # The app ClassLoader has no core ZIP search directory. Explicitly load the
+    # dependency closure before XUL; never fall back to a second copy in the APK.
+    native_order=[];visiting=set();done=set()
+    by_name={Path(n).name:info for n,info in libraries.items()}
+    def visit(name):
+        if name in done:return
+        if name in visiting:raise ValueError('Cyclic native dependency')
+        visiting.add(name)
+        for dep in by_name[name]['needed']:
+            if dep in by_name:visit(dep)
+        visiting.remove(name);done.add(name)
+        if not by_name[name]['executable']:native_order.append(name)
+    for name in sorted(by_name):visit(name)
     with tempfile.TemporaryDirectory(prefix='geckolite-pack-') as td:
         td=Path(td);core=td/'core.apk'
         with zipfile.ZipFile(core,'w',allowZip64=False) as z:
@@ -136,6 +155,10 @@ def split(aar, output, key, key_id, revision, profile, sequence, pom=None):
         signature=encoded({'keyId':key_id,'signature':base64.b64encode((td/'signature').read_bytes()).decode()})
         contract={k:manifest[k] for k in ['schemaVersion','abi','minApi','pageAlignment','revision','profile','releaseSequence','bridgeFingerprint','coreSha256','coreSize','buildId']}
         contract['manifestSha256']=sha(raw)
+        contract['resourceFd']=resource_fd
+        contract['nativeLoadOrder']=native_order
+        with zipfile.ZipFile(core) as packed:
+            contract['nativeOffsets']={Path(e.filename).name:e.header_offset+30+len(e.filename.encode())+len(e.extra) for e in packed.infolist() if e.filename.endswith('.so')}
         with zipfile.ZipFile(td/'bridge.aar','w',zipfile.ZIP_DEFLATED) as z:
             for name,data in sorted(bridge.items()):z.writestr(name,data)
             z.writestr('assets/geckolite/host-contract.json',encoded(contract))
@@ -162,8 +185,8 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ['aar','output','private-key']:p.add_argument('--'+name,type=Path,required=True)
     for name in ['key-id','revision','profile']:p.add_argument('--'+name,required=True)
-    p.add_argument('--sequence',type=int,required=True);p.add_argument('--pom',type=Path);a=p.parse_args()
-    try:result=split(a.aar,a.output,a.private_key,a.key_id,a.revision,a.profile,a.sequence,a.pom)
+    p.add_argument('--sequence',type=int,required=True);p.add_argument('--pom',type=Path);p.add_argument('--bootstrap',type=Path,required=True);p.add_argument('--resource-fd',type=int,default=900);a=p.parse_args()
+    try:result=split(a.aar,a.output,a.private_key,a.key_id,a.revision,a.profile,a.sequence,a.pom,a.bootstrap,a.resource_fd)
     except (ValueError,KeyError,zipfile.BadZipFile,subprocess.CalledProcessError) as error:p.exit(1,'package rejected: '+str(error)+'\n')
     print(json.dumps(result,sort_keys=True))
 if __name__=='__main__':main()
