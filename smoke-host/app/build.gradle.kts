@@ -14,10 +14,21 @@ android {
         versionCode = 1
         versionName = "0.1"
         ndk { abiFilters += "arm64-v8a" }
+        buildConfigField("boolean", "EXTERNAL_CORE", providers.gradleProperty("externalCore").getOrElse("false"))
+        buildConfigField("boolean", "ISOLATED_CORE", providers.gradleProperty("isolatedCore").getOrElse("false"))
+        buildConfigField("boolean", "ZYGOTE_CORE", providers.gradleProperty("zygoteCore").getOrElse("false"))
         buildConfigField("boolean", "RUNTIME_PROBE", providers.gradleProperty("runtimeProbe").getOrElse("false"))
         buildConfigField("boolean", "EXPECT_TRIMMED", providers.gradleProperty("expectTrimmed").getOrElse("false"))
     }
 
+    sourceSets.getByName("main") {
+        if (providers.gradleProperty("externalCore").getOrElse("false").toBoolean()) {
+            java.srcDir("src/external/java")
+            assets.srcDir(providers.gradleProperty("probeTrustAssets").get())
+        } else {
+            java.srcDir("src/bundled/java")
+        }
+    }
     buildFeatures { buildConfig = true }
 
     lint {
@@ -34,4 +45,7 @@ android {
 
 dependencies {
     implementation(providers.gradleProperty("geckoCoordinate").get())
+    if (providers.gradleProperty("externalCore").getOrElse("false").toBoolean()) {
+        implementation(project(":runtime-external"))
+    }
 }

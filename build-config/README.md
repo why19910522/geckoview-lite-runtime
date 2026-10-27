@@ -64,3 +64,7 @@ configure 通过后核对 `config.status.json` 的 SDK/ABI 参数，不能只看
 在上述三组补丁之后应用 `patches/pdf-speech/series`。当前推荐配置为 `mozconfig-sdk35-trim-os-thinlto-zh-CN-arm64`；`mozconfig-sdk35-trim-o2-zh-CN-arm64` 是相同裁剪源码的体积对照。两版使用独立 objdir、相同工具链与固定翻译，完整执行 configure → pre-export → export → binaries → merge-zh-CN → misc → libs → stage-package → Release 发布。
 
 新增 `--disable-pdfjs`，使用上游 `--disable-webspeech`；产品补丁同时移除启动入口、资源及 Speech Java/JNI 生成。DevTools server 保留。优化版使用 C/C++ `-Os` 和 `--enable-lto=thin`，Rust 维持原配置，不启用跨语言 LTO。实际编译选项、AAR 摘要及设备检查见[本轮构建记录](../docs/builds/2026-10-26-pdf-speech-cxx-size.md)。旧配置只能在对应补丁阶段的源码工作区使用。
+
+## 可选 external 本地加载
+
+在上述补丁后应用 `patches/external-core/series`。同一配置生成完整 bundled Release AAR，再由拆包工具生成 bridge 和签名核心；外置不再编译另一套 Gecko。新增 native 路径/ZIP/Bootstrap 改动需真实重编 binaries、libs、stage-package，然后发布 Release。小型引导库另由固定 NDK r30/API26 构建。加载范围、FD 槽限制和内存代价见[外置验证记录](../docs/builds/2026-10-26-external-core-m2.md)。

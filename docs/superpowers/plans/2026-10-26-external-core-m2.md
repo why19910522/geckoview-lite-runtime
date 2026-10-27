@@ -32,30 +32,31 @@
 **Files:** `engine-package-tools/package_core.py`、`engine-package-tools/tests/test_package_core.py`。
 **Interfaces:** 输入已验证完整 Release AAR、外部签名私钥、keyId、zipalign；输出 bundled 原输入、bridge AAR、签名 core-package.zip、host-contract.json。容器保持 `lib/arm64-v8a/*.so` 与 `assets/omni.ja`，库 stored/16KB 对齐；manifest 签名覆盖原始 UTF-8。
 
-- [ ] 测试拆包后 bridge 无引擎、core 原生库/资源摘要一致、签名可验证；缺失依赖和异常输入拒绝，先 RED 后 GREEN。
-- [ ] 从实际新 AAR 生成本地测试配对，检查无重复载荷、11 库闭包和格式。
+- [x] 测试拆包后 bridge 无引擎、core 原生库/资源摘要一致、签名可验证；缺失依赖和异常输入拒绝，先 RED 后 GREEN。
+- [x] 从实际新 AAR 生成本地测试配对，检查无重复载荷、11 库闭包和格式。
 
 ### Task 2: Gecko 加载与子进程 bootstrap
 
 **Files:** `patches/external-core/`；上游 GeckoLoader、GeckoThread、GeckoProcessManager、GeckoServiceChildProcess、ZygotePreload 的局部补丁。
 **Interfaces:** 仅接收已校验 core 的只读 PFD 与固定身份；`GeckoLoader.prepareExternalCore` 在首次 native 前固定选择；主进程和子进程的库基址/greomni 使用本进程 FD。默认未选择则 bundled。
 
-- [ ] 新 host/bridge 接口在旧 AAR 上不具备，记录 RED；新增选择、幂等/拒绝更换及子进程传递。
-- [ ] 完整产品目标构建、Release 发布、补丁零 fuzz 重放；真机验证 FD ZIP namespace 和资源访问。若平台不支持则 fail closed，不取消隔离。
+- [x] 新 host/bridge 接口在旧 AAR 上不具备，记录 RED；新增选择、幂等/拒绝更换及子进程传递。
+- [x] 完整产品目标构建、Release 发布、补丁零 fuzz 重放；真机验证 FD ZIP namespace 和资源访问。若平台不支持则 fail closed，不取消隔离。
 
 ### Task 3: 本地校验与安装 API
 
 **Files:** `runtime-external/`（纯 Java 验证逻辑 + Android 适配）。
 **Interfaces:** `CoreStore.install(InputStream)` 返回受控包 ID；`prepare(packageId)` 在 native 前绑定匹配包；查询 ABSENT/INSTALLED/PREPARED。宿主注入可信 P-256 公钥，host contract 从 bridge 资产读取。只接受安装 ID，不提供任意 so 路径 API。
 
-- [ ] 签名/重复 JSON/错误配对/损坏 payload/异常 ZIP/超限、重复安装、失败保留旧包，先真实文件 RED 后 GREEN。
-- [ ] 包目录原子发布、安装互斥、准备前重验；持有进程树租约，拒绝活跃不同包；不实现自动 GC/切换/健康回退。
+- [x] 签名/重复 JSON/错误配对/损坏 payload/异常 ZIP/超限、重复安装、失败保留旧包，先真实文件 RED 后 GREEN。
+- [x] 包目录原子发布、安装互斥、准备前重验；持有进程树租约，拒绝活跃不同包；不实现自动 GC/切换/健康回退。
 
 ### Task 4: 双模式宿主与设备证据
 
 **Files:** `smoke-host/`、`docs/builds/2026-10-26-external-core-m2.{md,json}`、接入文档。
 **Interfaces:** 外置探针 APK 仅 bridge + installer；测试包从本地导入，不放入 APK；保留既有 bundled probe。所有实际启动的子进程日志关联同包身份。
 
-- [ ] 缺包结构化失败、安装后冷启动、重复准备/错误包拒绝；保留页面/Speech/PDF/DevTools 检查。
-- [ ] 真机覆盖默认子进程、isolated 与 zygote 的加载；记录未启动的进程类型和未验证设备范围，不夸大。
-- [ ] 比较基础 APK/内核包/安装字节；执行针对本轮变更的全套测试、graphify AST 更新和最终独立审查，再提交同步 PR。
+- [x] 缺包结构化失败、安装后冷启动、重复准备/错误包拒绝；保留页面/Speech/PDF/DevTools 检查。
+- [x] 真机覆盖默认子进程、isolated 与 zygote 的加载；记录未启动的进程类型和未验证设备范围，不夸大。
+- [x] 比较基础 APK/内核包/安装字节；执行针对本轮变更的全套测试和 graphify AST 更新。
+- [ ] 最终独立审查，处理重要发现，再提交同步 PR。

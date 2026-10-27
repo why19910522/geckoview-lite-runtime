@@ -2,7 +2,7 @@
 
 基于 Gecko/GeckoView 源码定制的 Android 浏览器运行时方案：裁剪可选功能，并提供随应用打包和可选的动态加载两种接入方式。
 
-**当前阶段：已生成 70.94 MiB 的 arm64 Release AAR。** 保留 DevTools，移除 PDF.js、Web Speech、Glean SDK 后端和 Crash reporter，开启 Lite，仅保留 zh-CN UI。相同裁剪源码下，C/C++ `-Os + ThinLTO` 比 `-O2` AAR 减少 10.12%；compileSdk35、targetSdk30、minSdk26 不变。已通过独立宿主编译和一台 Android 16 真机的页面、远程调试及 PDF 外部响应检查。动态加载与全面兼容性尚未验证，项目不是 Mozilla 官方产品。
+**当前阶段：静态 Release 与可选外置加载原型均已生成。** 保持 compileSdk35 / targetSdk30 / minSdk26、Lite、仅 zh-CN、C/C++ `-Os + ThinLTO`，保留 DevTools，移除 reporter、Glean SDK 后端、PDF.js 和 Web Speech。完整 AAR 为70.95 MiB；外置 bridge AAR 为1.32 MiB，签名内核包69.64 MiB。双模式在一台 Android16真机通过默认、isolated、app zygote 的页面、真实远程调试和 PDF 外部响应检查。外置基础探针 APK 为4.12 MiB，另需安装内核；共享容器增加内存压力。当前 external 是实验原型，需要预留契约内的资源 FD 槽，尚未完成多设备/16KB设备验证及自动更新回退。项目不是 Mozilla 官方产品。
 
 ## 设计原则
 
@@ -17,6 +17,7 @@
 
 | 文档 | 内容 |
 | --- | --- |
+| [外置内核 M2 原型](docs/builds/2026-10-26-external-core-m2.md) | 同次构建拆包、验签安装、FD/isolated/zygote、双模式设备证据与边界 |
 | [PDF.js / Speech 裁剪与 C++ 优化](docs/builds/2026-10-26-pdf-speech-cxx-size.md) | 当前 AAR、同源码体积对照、DevTools 真机证据、裁剪边界和验证限制 |
 | [无 Glean 中文 Release AAR](docs/builds/2026-10-26-no-glean-release-zh-CN.md) | 当前变体、SDK 后端移除、Release 来源、产物摘要和实际验证范围 |
 | [Lite 中文 AAR](docs/builds/2026-10-23-lite-zh-CN.md) | 上一版 Debug 变体、reporter 移除、中文打包和体积对比 |
@@ -30,4 +31,4 @@
 | [决策记录](docs/decisions.md) | 已确认要求、方案默认选择及后续需要确认的产品参数 |
 | [调研版本记录](upstream-research.json) | 调研使用的上游仓库和不可变修订 |
 
-仓库保存方案、可重放源码补丁、构建配置和静态验证宿主；完整上游源码、构建产物及签名私钥留在 ignored 本机目录。当前变体保留无操作指标兼容接口、旧 Telemetry、WebRTC、JXL、断词词典和 PDF 打印/生成；HLS/Media3 继续关闭。PDF 查看需由宿主接管外部响应。旧基线记录保留；上游聚合示例、全站性能和多设备兼容性不属于已通过结论。
+仓库保存方案、可重放源码补丁、构建配置、拆包工具、可选本地安装器和双模式验证宿主；完整上游源码、构建产物及签名私钥留在 ignored 本机目录。当前变体保留无操作指标兼容接口、旧 Telemetry、WebRTC、JXL、断词词典和 PDF 打印/生成；HLS/Media3 继续关闭。PDF 查看需由宿主接管外部响应。旧基线记录保留；上游聚合示例、全站性能和多设备兼容性不属于已通过结论。

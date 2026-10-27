@@ -1,5 +1,8 @@
 pluginManagement {
     repositories {
+        providers.gradleProperty("localBuildRepository").orNull?.let { local ->
+            maven { url = uri(local) }
+        }
         google()
         mavenCentral()
         gradlePluginPortal()
@@ -17,6 +20,9 @@ dependencyResolutionManagement {
             forRepository { maven { url = uri(geckoRepository) } }
             filter { includeGroup("org.mozilla.geckoview") }
         }
+        providers.gradleProperty("localBuildRepository").orNull?.let { local ->
+            maven { url = uri(local) }
+        }
         google()
         mavenCentral()
         upstreamDependencyRepository?.let { repository ->
@@ -30,3 +36,8 @@ dependencyResolutionManagement {
 
 rootProject.name = "geckoview-sdk35-smoke"
 include(":app")
+
+if (providers.gradleProperty("externalCore").getOrElse("false").toBoolean()) {
+    include(":runtime-external")
+    project(":runtime-external").projectDir = file("../runtime-external")
+}

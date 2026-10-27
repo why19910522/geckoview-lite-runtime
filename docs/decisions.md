@@ -55,3 +55,5 @@
 2026-10-26：用户要求继续移除 Glean 并生成 Release AAR，保持 compile35/target30 和仅中文。当前产品额外移除 Glean SDK、FOG/JOG/Trace 后端，保留无操作指标兼容接口；实际 Release 组件及 optimized non-debug native 已验证。详见[Release 记录](builds/2026-10-26-no-glean-release-zh-CN.md)。此前 Debug 变体及“仍保留 Glean”的记录作为历史基线，不代表当前产物。
 
 2026-10-26：按最新要求移除 PDF.js 查看器及 Web Speech 的构建/资源/Java/JNI 闭包，保留 DevTools server、WebRTC、JXL、断词词典和 PDF 打印/生成。PDF 响应由宿主通过 `onExternalResponse` 接管。相同裁剪源码的 `-O2` 与 C/C++ `-Os + ThinLTO` 对照，AAR 从 78.93 MiB 降至 70.94 MiB；选择后者为当前交付。Rust 不启用跨语言 LTO。两版在一台 Android 16 arm64 真机通过最小页面、Speech 接口移除、DevTools 与 PDF 外部响应检查；不据此保证全面性能或设备兼容性。见[本轮记录](builds/2026-10-26-pdf-speech-cxx-size.md)。
+
+2026-10-27：完成 M2 单设备本地外置加载原型：同次构建精确 bridge/core 配对，P-256验签安装、OFD租约、sealed memfd 与 FD-offset 加载，保留 isolated/zygote 沙箱。资源 FD 槽由 APK 契约指定，默认900，冲突失败且不覆盖；共享162.88MiB容器增加内存压力。外置/静态三模式页面、RDP与PDF检查通过；16KB设备、其他Android/OEM及M3自动可靠性仍未完成。没有渠道地址、下载器、自动更新或GC。详见[本轮记录](builds/2026-10-26-external-core-m2.md)。

@@ -1,6 +1,6 @@
-# SDK 35 静态消费验证宿主
+# SDK 35 双模式消费验证宿主
 
-此宿主用于消费**本机源码构建发布的 GeckoView**，固定 `compileSdk=35`、`targetSdk=30`、`minSdk=26` 和 arm64-v8a。它不包含动态加载、下载服务或内核分发地址。启动页面来自 APK 内的 `assets/smoke.html`。
+此宿主用于消费**本机源码构建发布的 GeckoView**，固定 `compileSdk=35`、`targetSdk=30`、`minSdk=26` 和 arm64-v8a。默认使用 bundled；可显式启用 external 本地安装探针，不包含下载服务或内核分发地址。启动页面来自 APK 内的 `assets/smoke.html`。
 
 ## 输入
 
@@ -57,3 +57,13 @@ python3 "$RUNTIME_REPO/smoke-host/scripts/probe-rdp.py" \
 脚本核验 RDP 握手、listTabs、getTarget、thread/inspector actor 及 console evaluation，随后读取页面结果。脚本不自动等待页面探针完成，过早执行会失败，可在完成后重试。可选 `--navigate-pdf` 仅调度本地 PDF 导航；还必须检查本应用 PID 的 `GeckoTrimProbe` 日志中 `EXTERNAL_RESPONSE` 回调和 `application/pdf`、414 字节响应长度，不能把调度成功当作 PDF 处理通过。宿主仅关闭测试响应流，实际应用需要实现保存或外部打开。
 
 完成后移除自己创建的端口转发及测试应用，不清理其他应用或全设备日志。本轮实际设备证据和限制见[裁剪与优化记录](../docs/builds/2026-10-26-pdf-speech-cxx-size.md)。
+
+## 外置内核探针
+
+使用拆包工具输出的 `maven/` 与 bridge 坐标；构建时增加 `-PexternalCore=true -PprobeTrustAssets="$LOCAL_TRUST_ASSETS" -PsmokeApplicationId=dev.geckolite.smoke.external -PruntimeProbe=true -PexpectTrimmed=true`。该目录只需包含对应本机测试公钥 `probe-public.der`，不包含私钥或内核包。可传入 `-PlocalBuildRepository="$LOCAL_DEPENDENCY_MIRROR"` 复用本地构建依赖。
+
+`-PisolatedCore=true`、`-PzygoteCore=true` 分别选择上游 isolated 与 app zygote 运行设置；默认均为 false，沿用原宿主默认值。测试时可以通过启动 Intent 的同名 boolean extra 覆盖，必须先彻底停止本测试应用再启动，不能在已有 Runtime 上切换。
+
+把签名 `core-package.zip` 从本机输入流导入探针自身 `files/incoming-core.zip`，以 `installCore=true` 启动一次。探针安装到自己的 no-backup 目录、删除导入副本、重复 prepare 验证幂等和 OFD 租约，再创建 Runtime；后续冷启动无需再次导入。缺包或校验失败只显示失败状态，不初始化 Gecko。此输入方式仅为本地设备验证，不构成分发服务。
+
+运行 `scripts/check-external-apk.py` 核验外置 APK：只允许小型 bootstrap SO，无 11 个 Gecko 库或 `omni.ja`。页面、RDP、PDF 的检查方法与 bundled 相同。每个实际启动的父/GPU/内容进程输出相同 packageId，isolated 子进程 UID 不同，收集日志时不可只按宿主 UID 过滤。
