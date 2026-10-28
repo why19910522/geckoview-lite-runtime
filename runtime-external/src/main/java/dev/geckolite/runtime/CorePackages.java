@@ -18,12 +18,20 @@ public final class CorePackages {
   private static final List<String> CONTRACT_FIELDS=Arrays.asList("schemaVersion","abi","minApi","pageAlignment","revision","profile","releaseSequence","bridgeFingerprint","coreSha256","coreSize","buildId");
   private CorePackages() { }
 
+  interface Durability { void force(Path path, FileChannel channel) throws IOException; }
+  private static final Durability FSYNC=(path,channel)->channel.force(true);
+
   public static String install(Path root, InputStream source, byte[] contractBytes,
       Map<String,PublicKey> trustedKeys) throws CoreException {
+    return install(root,source,contractBytes,trustedKeys,FSYNC);
+  }
+
+  static String install(Path root, InputStream source, byte[] contractBytes,
+      Map<String,PublicKey> trustedKeys, Durability durability) throws CoreException {
     synchronized(INSTALL_MUTEX) {
       Path stage=null;
       try {
-        Files.createDirectories(root);
+        createRoot(root,durability);
         try(FileChannel channel=FileChannel.open(root.resolve("install.lock"),StandardOpenOption.CREATE,StandardOpenOption.WRITE);
             FileLock ignored=channel.lock()) {
           // Only installer scratch is removed under the exclusive install lock.
@@ -51,18 +59,53 @@ public final class CorePackages {
           String id=sha(raw);
           Files.delete(packet);
           Files.write(stage.resolve("manifest.json"),raw);Files.write(stage.resolve("manifest.sig"),envelope);
-          Files.createFile(stage.resolve("lease"));
-          for(String name:Arrays.asList("core.apk","manifest.json","manifest.sig")) {
-            Path p=stage.resolve(name);
-            try(FileChannel sync=FileChannel.open(p,StandardOpenOption.WRITE)){sync.force(true);}
-            if(!p.toFile().setReadable(true,true)||!p.toFile().setWritable(false,false))throw new IOException("Cannot set immutable package permissions");
+          Path target=root.resolve(id), coordination=leasePath(root,id);
+          if(!Files.exists(coordination,LinkOption.NOFOLLOW_LINKS)) {
+            Files.createFile(coordination);
           }
-          Path target=root.resolve(id);
+          if(!Files.isRegularFile(coordination,LinkOption.NOFOLLOW_LINKS))throw new IOException("Invalid stable lease");
+          try(FileChannel sync=FileChannel.open(coordination,StandardOpenOption.WRITE)){durability.force(coordination,sync);}
+          Files.createFile(stage.resolve("lease"));
+          for(String name:Arrays.asList("core.apk","manifest.json","manifest.sig","lease")) {
+            Path p=stage.resolve(name);
+            // Keep the writable channel open across chmod, then persist content
+            // and final metadata together. The lease remains writable for locks.
+            try(FileChannel sync=FileChannel.open(p,StandardOpenOption.WRITE)) {
+              if(!name.equals("lease")&&(!p.toFile().setReadable(true,true)||!p.toFile().setWritable(false,false)))
+                throw new IOException("Cannot set immutable package permissions");
+              durability.force(p,sync);
+            }
+          }
+          syncDirectory(stage,durability);
+          syncDirectory(root,durability); // Stable lease entry precedes publication.
           if(Files.exists(target,LinkOption.NOFOLLOW_LINKS)) {
-            validateInstalled(root,id,contractBytes,trustedKeys);
-            removeStage(stage);stage=null;return id;
+            try {
+              validateInstalled(root,id,contractBytes,trustedKeys);
+            } catch(CoreException invalid) {
+              if(invalid.code!=CoreException.Code.CORE_CORRUPT&&invalid.code!=CoreException.Code.CORE_NOT_INSTALLED)throw invalid;
+              // The permanent coordination inode prevents a missing per-package
+              // lease from bypassing an active process' OFD/shared lock.
+              try(FileChannel held=FileChannel.open(coordination,StandardOpenOption.READ,StandardOpenOption.WRITE)) {
+                FileLock repair;
+                try {repair=held.tryLock();}catch(OverlappingFileLockException busy){repair=null;}
+                if(repair==null)throw fail(CoreException.Code.CORE_IN_USE,"Incomplete package is leased");
+                try(FileLock owned=repair) {
+                  Path quarantine=root.resolve(".stage-repair-"+UUID.randomUUID());
+                  Files.move(target,quarantine,StandardCopyOption.ATOMIC_MOVE);
+                  Files.move(stage,target,StandardCopyOption.ATOMIC_MOVE);stage=null;
+                  syncDirectory(root,durability);
+                  removeStage(quarantine);
+                  syncDirectory(root,durability);
+                  return id;
+                }
+              }
+            }
+            removeStage(stage);stage=null;
+            syncDirectory(root,durability); // Retry also persists a prior rename.
+            return id;
           }
           Files.move(stage,target,StandardCopyOption.ATOMIC_MOVE);stage=null;
+          syncDirectory(root,durability);
           return id;
         }
       } catch(CoreException e){throw e;}
@@ -80,12 +123,33 @@ public final class CorePackages {
     try {
       for(String name:Arrays.asList("core.apk","manifest.json","manifest.sig","lease"))
         if(!Files.isRegularFile(dir.resolve(name),LinkOption.NOFOLLOW_LINKS))throw fail(CoreException.Code.CORE_CORRUPT,"Installed file missing or linked");
+      Path coordination=leasePath(root,id);
+      if(!Files.isRegularFile(coordination,LinkOption.NOFOLLOW_LINKS))
+        throw fail(CoreException.Code.CORE_CORRUPT,"Stable lease missing or replaced");
       byte[] raw=boundedFile(dir.resolve("manifest.json"),65536), envelope=boundedFile(dir.resolve("manifest.sig"),2048);
       if(!sha(raw).equals(id))throw fail(CoreException.Code.CORE_CORRUPT,"Installed identity mismatch");
       Map<String,Object> manifest=authenticate(raw,envelope,contract,keys);
       Path core=dir.resolve("core.apk");verifyCore(core,manifest);return core;
     } catch(CoreException e){throw e;}
     catch(IOException e){throw new CoreException(CoreException.Code.CORE_CORRUPT,"Installed package unreadable",e);}
+  }
+
+  static Path leasePath(Path root,String id) {return root.resolve(".lease-"+id);}
+
+  private static void syncDirectory(Path path,Durability durability) throws IOException {
+    try(FileChannel channel=FileChannel.open(path,StandardOpenOption.READ)){durability.force(path,channel);}
+  }
+
+  private static void createRoot(Path root,Durability durability) throws IOException {
+    List<Path> created=new ArrayList<>();
+    Path cursor=root.toAbsolutePath();
+    while(cursor!=null&&!Files.exists(cursor,LinkOption.NOFOLLOW_LINKS)){created.add(cursor);cursor=cursor.getParent();}
+    Files.createDirectories(root);
+    // Persist new ancestors from the existing parent down to the package root.
+    Collections.reverse(created);
+    for(Path path:created){syncDirectory(path,durability);syncDirectory(path.getParent(),durability);}
+    // Also covers a retry after an earlier parent-directory fsync failed.
+    if(created.isEmpty())syncDirectory(root.toAbsolutePath().getParent(),durability);
   }
 
   private static Map<String,Object> authenticate(byte[] raw, byte[] envelope, byte[] host,

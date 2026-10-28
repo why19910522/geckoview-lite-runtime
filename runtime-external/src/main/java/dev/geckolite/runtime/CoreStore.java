@@ -40,7 +40,7 @@ public final class CoreStore {
     if(prepared!=null&&!prepared.equals(packageId))throw new CoreException(CoreException.Code.CORE_RESTART_REQUIRED,"Process already prepared");
     Path core=CorePackages.validateInstalled(root,packageId,contract,keys);
     try(ParcelFileDescriptor data=ParcelFileDescriptor.open(core.toFile(),ParcelFileDescriptor.MODE_READ_ONLY);
-        ParcelFileDescriptor lease=ParcelFileDescriptor.open(core.getParent().resolve("lease").toFile(),ParcelFileDescriptor.MODE_READ_ONLY)) {
+        ParcelFileDescriptor lease=ParcelFileDescriptor.open(CorePackages.leasePath(root,packageId).toFile(),ParcelFileDescriptor.MODE_READ_ONLY)) {
       GeckoLoader.prepareExternalCore(context,packageId,data,lease);prepared=packageId;
     } catch(IOException e){throw new CoreException(CoreException.Code.IO_ERROR,"Cannot open installed package",e);}
     catch(IllegalStateException e){throw new CoreException("CORE_RESTART_REQUIRED".equals(e.getMessage())?CoreException.Code.CORE_RESTART_REQUIRED:CoreException.Code.CORE_LOAD_UNSUPPORTED,"Native bootstrap selection rejected",e);}

@@ -22,6 +22,11 @@ final class CoreBootstrap {
             }
             if(!source.delete())throw new IOException("Cannot remove test import");
         }
+        String collision=((android.app.Activity)context).getIntent().getStringExtra("collisionLibrary");
+        if(collision!=null) {
+            if(!Arrays.asList("libmozglue.so","libnss3.so","libfreebl3.so").contains(collision))throw new IOException("Invalid collision fixture");
+            System.load(new File(context.getFilesDir(),"collision/"+collision).getAbsolutePath());
+        }
         store.prepare(store.expectedPackageId());
         store.prepare(store.expectedPackageId()); // Repeated selection must be idempotent.
         try {store.prepare("0000000000000000000000000000000000000000000000000000000000000000");
@@ -31,7 +36,7 @@ final class CoreBootstrap {
         }
         Log.i("GeckoExternalProbe","DIFFERENT_PACKAGE_REJECTED");
         // Use an independently opened description: dup must not release an OFD lease.
-        File lease=new File(context.getNoBackupFilesDir(),"geckolite-cores/"+store.expectedPackageId()+"/lease");
+        File lease=new File(context.getNoBackupFilesDir(),"geckolite-cores/.lease-"+store.expectedPackageId());
         java.lang.reflect.Method lock=Class.forName("org.mozilla.gecko.mozglue.ExternalCore").getDeclaredMethod("nativeLockLease",int.class,boolean.class);
         lock.setAccessible(true);
         try(android.os.ParcelFileDescriptor test=android.os.ParcelFileDescriptor.open(lease,android.os.ParcelFileDescriptor.MODE_READ_WRITE)) {
@@ -59,6 +64,9 @@ final class CoreBootstrap {
         } finally {android.system.Os.close(writable);}
         Log.i("GeckoExternalProbe","SEALED_CORE_WRITE_REJECTED");
         Log.i("GeckoExternalProbe","PREPARED id="+store.expectedPackageId()+" profile="+store.capabilityProfile());
+    }
+    static String failureCode(Throwable error) {
+        return error instanceof CoreException?((CoreException)error).code.name():error.getClass().getSimpleName();
     }
     private static void assertLeaseBusy(java.lang.reflect.Method method,int fd) throws Exception {
         int error=(Integer)method.invoke(null,fd,true);

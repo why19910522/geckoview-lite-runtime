@@ -65,7 +65,32 @@ def elf_info(data):
             desc = data[off:off+descsz];off += (descsz+3)&~3
             if kind == 3 and name == b'GNU\0':build_id = desc.hex()
     if not build_id: raise ValueError('ELF build-id required')
-    return {'needed':needed,'soname':soname,'executable':any(h[0] == 3 for h in headers),'buildId':build_id,'minimumLoadAlignment':min(h[7] for h in loads)}
+    # A defined public export lets the loader verify dlsym/dladdr provenance
+    # using public NDK APIs; never rely on a SONAME-only dlopen result.
+    shoff = struct.unpack_from('<Q', data, 40)[0]
+    shsize, shcount = struct.unpack_from('<HH', data, 58)
+    anchors = []
+    if shcount:
+        if shsize != 64 or shoff + shcount * shsize > len(data):
+            raise ValueError('Invalid ELF section headers')
+        sections = [struct.unpack_from('<IIQQQQIIQQ', data, shoff+i*shsize) for i in range(shcount)]
+        for section in sections:
+            if section[1] != 11:continue
+            if section[9] != 24 or section[5] % 24 or section[4]+section[5] > len(data) or section[6] >= shcount:
+                raise ValueError('Invalid ELF dynamic symbols')
+            strings_section = sections[section[6]]
+            start, length = strings_section[4:6]
+            if start+length > len(data):raise ValueError('Invalid ELF symbol strings')
+            for pos in range(section[4], section[4]+section[5], 24):
+                index, info, visibility, defined, value, size = struct.unpack_from('<IBBHQQ', data, pos)
+                if info >> 4 != 1 or info & 15 not in (1,2) or visibility & 3 not in (0,3) or not defined or not value or not size:continue
+                if index >= length:raise ValueError('Invalid ELF symbol name')
+                end = data.find(b'\0', start+index, start+length)
+                if end < 0:raise ValueError('Unterminated ELF symbol')
+                name = data[start+index:end].decode('ascii')
+                if re.fullmatch('[A-Za-z_][A-Za-z0-9_]{0,200}', name):anchors.append(name)
+    anchor = min(anchors, key=lambda n:(n.startswith('_'), n)) if anchors else None
+    return {'anchor':anchor,'needed':needed,'soname':soname,'executable':any(h[0] == 3 for h in headers),'buildId':build_id,'minimumLoadAlignment':min(h[7] for h in loads)}
 
 def checked_entries(z):
     seen = set()
@@ -140,6 +165,7 @@ def split(aar, output, key, key_id, revision, profile, sequence, pom=None, boots
         visiting.remove(name);done.add(name)
         if not by_name[name]['executable']:native_order.append(name)
     for name in sorted(by_name):visit(name)
+    if any(not by_name[n]['anchor'] for n in native_order):raise ValueError('Native provenance export required')
     with tempfile.TemporaryDirectory(prefix='geckolite-pack-') as td:
         td=Path(td);core=td/'core.apk'
         with zipfile.ZipFile(core,'w',allowZip64=False) as z:
@@ -157,6 +183,7 @@ def split(aar, output, key, key_id, revision, profile, sequence, pom=None, boots
         contract['manifestSha256']=sha(raw)
         contract['resourceFd']=resource_fd
         contract['nativeLoadOrder']=native_order
+        contract['nativeAnchors']={n:by_name[n]['anchor'] for n in native_order}
         with zipfile.ZipFile(core) as packed:
             contract['nativeOffsets']={Path(e.filename).name:e.header_offset+30+len(e.filename.encode())+len(e.extra) for e in packed.infolist() if e.filename.endswith('.so')}
         with zipfile.ZipFile(td/'bridge.aar','w',zipfile.ZIP_DEFLATED) as z:

@@ -39,9 +39,16 @@ Java_org_mozilla_gecko_mozglue_ExternalCore_nativeSealed(JNIEnv* env, jclass cls
 }
 
 JNIEXPORT jint JNICALL
-Java_org_mozilla_gecko_mozglue_ExternalCore_nativeSealContainer(JNIEnv* env, jclass cls, jint input, jlong size) {
+Java_org_mozilla_gecko_mozglue_ExternalCore_nativeSealContainer(JNIEnv* env, jclass cls, jint input, jlong size, jstring identity) {
   if (size < 1 || size > 512LL * 1024 * 1024) return -EINVAL;
-  int fd = (int)syscall(__NR_memfd_create, "geckolite-core", MFD_CLOEXEC | MFD_ALLOW_SEALING);
+  const char* id = (*env)->GetStringUTFChars(env, identity, NULL);
+  if (!id) return -EINVAL;
+  char memname[96];
+  int valid = strlen(id) == 64 && strspn(id, "0123456789abcdef") == 64;
+  snprintf(memname, sizeof(memname), "geckolite-core-%s", valid ? id : "invalid");
+  (*env)->ReleaseStringUTFChars(env, identity, id);
+  if (!valid) return -EINVAL;
+  int fd = (int)syscall(__NR_memfd_create, memname, MFD_CLOEXEC | MFD_ALLOW_SEALING);
   if (fd < 0) return -errno;
   int saved = 0;
   char buffer[65536];
@@ -78,6 +85,28 @@ static void throw_link(JNIEnv* env, const char* message) {
   if (error) (*env)->ThrowNew(env, error, message);
 }
 
+/* RTLD_NOLOAD checks the same ClassLoader namespace as the real load. Check
+ * the complete non-system closure before any engine constructor can run. The
+ * embedding app must serialize other loads of these SONAMEs during bootstrap;
+ * this is fail-closed validation, not a private linker namespace. */
+JNIEXPORT void JNICALL
+Java_org_mozilla_gecko_mozglue_ExternalCore_nativePreflight(JNIEnv* env, jclass cls, jobjectArray libraries) {
+  jsize count = (*env)->GetArrayLength(env, libraries);
+  for (jsize i = 0; i < count; ++i) {
+    jstring library = (*env)->GetObjectArrayElement(env, libraries, i);
+    const char* name = (*env)->GetStringUTFChars(env, library, NULL);
+    if (!name) return;
+    void* loaded = dlopen(name, RTLD_NOW | RTLD_NOLOAD);
+    (*env)->ReleaseStringUTFChars(env, library, name);
+    (*env)->DeleteLocalRef(env, library);
+    if (loaded) {
+      dlclose(loaded);
+      throw_link(env, "Engine SONAME already loaded in host namespace");
+      return;
+    }
+  }
+}
+
 static int register_glue(JNIEnv* env, void* glue, const char* name,
                          const char* prefix, JNINativeMethod* methods, int count) {
   jclass cls = (*env)->FindClass(env, name);
@@ -95,17 +124,50 @@ static int register_glue(JNIEnv* env, void* glue, const char* name,
 
 JNIEXPORT void JNICALL
 Java_org_mozilla_gecko_mozglue_ExternalCore_nativeLoad(JNIEnv* env, jclass cls,
-                                                     jint fd, jlong offset, jstring library) {
+                                                     jint fd, jlong offset, jstring library, jstring identity, jstring export) {
   if (offset < 0 || offset % 16384) { throw_link(env, "Invalid core ELF offset"); return; }
   const char* name = (*env)->GetStringUTFChars(env, library, NULL);
   if (!name) return;
   android_dlextinfo info = {.flags = ANDROID_DLEXT_USE_LIBRARY_FD | ANDROID_DLEXT_USE_LIBRARY_FD_OFFSET,
                            .library_fd = fd, .library_fd_offset = offset};
-  void* handle = android_dlopen_ext(name, RTLD_NOW | RTLD_GLOBAL, &info);
-  if (!handle) {
+  const char* id = (*env)->GetStringUTFChars(env, identity, NULL);
+  const char* anchor = (*env)->GetStringUTFChars(env, export, NULL);
+  if (!id || !anchor) {
+    if (id) (*env)->ReleaseStringUTFChars(env, identity, id);
+    if (anchor) (*env)->ReleaseStringUTFChars(env, export, anchor);
+    (*env)->ReleaseStringUTFChars(env, library, name);
+    return;
+  }
+  char qualified[256], fdpath[64], source[256];
+  snprintf(qualified, sizeof(qualified), "/geckolite/%s/%s", id, name);
+  snprintf(fdpath, sizeof(fdpath), "/proc/self/fd/%d", fd);
+  ssize_t n = readlink(fdpath, source, sizeof(source)-1);
+  if (n >= 0) source[n] = 0;
+  void* existing = dlopen(name, RTLD_NOW | RTLD_NOLOAD);
+  void* handle = NULL;
+  if (existing) {
+    dlclose(existing);
+    throw_link(env, "Engine SONAME appeared during bootstrap");
+  } else if (n < 0) {
+    throw_link(env, "Cannot identify sealed core source");
+  } else {
+    /* A slash skips Bionic's early SONAME reuse before FD processing. */
+    handle = android_dlopen_ext(qualified, RTLD_NOW | RTLD_GLOBAL, &info);
+  }
+  if (handle) {
+    Dl_info origin;
+    void* symbol = dlsym(handle, anchor);
+    if (!symbol || !dladdr(symbol, &origin) || !origin.dli_fname || strcmp(source, origin.dli_fname)) {
+      dlclose(handle); handle = NULL;
+      throw_link(env, "Loaded native export is not from selected sealed container");
+    }
+  }
+  (*env)->ReleaseStringUTFChars(env, identity, id);
+  (*env)->ReleaseStringUTFChars(env, export, anchor);
+  if (!handle && !(*env)->ExceptionCheck(env)) {
     const char* detail = dlerror();
     throw_link(env, detail ? detail : "Cannot load matched core FD");
-  } else if (strcmp(name, "libmozglue.so") == 0) {
+  } else if (handle && strcmp(name, "libmozglue.so") == 0) {
     /* android_dlopen_ext does not register a library with ART. Register all
      * mozglue JNI exports from the matched handle, without a second dlopen. */
     JNINativeMethod loader[] = {

@@ -4,7 +4,7 @@
 
 Java、Android 资源和服务留在 bridge。新增 `ExternalCore` 在首次 Gecko native 初始化前固定 APK 契约中的身份；完整重验核心摘要、只读描述符和共享 OFD 租约。父进程只创建一次完全封闭写入/扩缩容的 memfd，各子进程继承同一容器。小型引导库由 `engine-package-tools/native/bootstrap.c` 构建，只添加到 bridge；完整 bundled AAR 无此依赖。
 
-`android_dlopen_ext` 按可信 APK 契约内的 ZIP 偏移加载完整依赖闭包，并从同一 mozglue handle 注册其 11 个 JNI 方法。APKOpen 在明确已预加载时只查找已加载的 SONAME/Bootstrap，不重新打开文件或回退到另一份引擎。普通 bundled 路径保留。
+准备及首次 native 加载前，在 bootstrap namespace 检查整个非系统 SONAME 闭包，已有同名库时拒绝。`android_dlopen_ext` 使用包含 packageId 的名称和可信 APK 契约内的 ZIP 偏移加载完整依赖闭包；对逐库导出锚点执行 dlsym/dladdr，核对映射来自所选 memfd；从同一 mozglue handle 注册其 11 个 JNI 方法。APKOpen 在明确已预加载时只查找已加载的 SONAME/Bootstrap，不重新打开文件或回退到另一份引擎。普通 bundled 路径保留。宿主须在准备前停止其他组件加载这些 SONAME，并在引擎生存期保持这一约束；预检不构成私有 linker namespace 隔离。
 
 Android 的 `XRE_GetFileFromPath` 及 ZIP reader 对严格数字 `/proc/self/fd/N`、只读 regular FD、完整 seals 特判：保留 FD 路径并 dup/import 到 NSPR。其他路径继续使用原 canonicalization/open 行为。此特判解决 memfd 无真实文件名以及 isolated SELinux 只允许继承 FD 的问题。
 

@@ -39,6 +39,8 @@ class Packages(unittest.TestCase):
     self.assertEqual(bridge.read('classes.jar'),b'bridge classes')
     contract=json.loads(bridge.read('assets/geckolite/host-contract.json'))
     self.assertLess(contract['nativeLoadOrder'].index('libmozglue.so'),contract['nativeLoadOrder'].index('libxul.so'))
+    self.assertEqual(contract['nativeAnchors']['libmozglue.so'],'fixture')
+    self.assertEqual(contract['nativeAnchors']['libxul.so'],'second')
    with zipfile.ZipFile(out/'core-package.zip') as package:
     self.assertEqual(set(package.namelist()),{'manifest.json','manifest.sig','core.apk'})
     manifest=package.read('manifest.json');m=json.loads(manifest);sig=json.loads(package.read('manifest.sig'))

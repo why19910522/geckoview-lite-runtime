@@ -19,12 +19,24 @@
   "containerBytes": 170790884,
   "contract": {
     "abi": "arm64-v8a",
-    "bridgeFingerprint": "600fc3d64646974fb205e62058c79024e4eff2aab0d8589147f5176dd647ba94",
+    "bridgeFingerprint": "e795066d73d39f73d1912c256c6f07443326895137c079200e52e334712f6910",
     "buildId": "c65866145945e8a3a25fc73da6b5a99f6e1b9c52",
     "coreSha256": "d0dd5f3bf450b366d338a615b606c4950e788bf0e80fe1bd2ae44ef7eb660e31",
     "coreSize": 170790884,
-    "manifestSha256": "9573207a4146cff3290212d5c0239fb898ae5b1539b286d0dd21c553246c6bb0",
+    "manifestSha256": "32b8484cd2dcaeb025258049f4d2a301a361cb01fbda3230886dc131417d781c",
     "minApi": 26,
+    "nativeAnchors": {
+      "libclearkey.so": "CreateCdmInstance",
+      "libfreebl3.so": "FREEBL_GetVector",
+      "libgkcodecs.so": "aom_codec_av1_cx",
+      "liblgpllibs.so": "_ZN7mozilla15RLBoxSoundTouch10numSamplesEv",
+      "libmozavcodec.so": "av_codec_ffversion",
+      "libmozavutil.so": "av_add_q",
+      "libmozglue.so": "ChildProcessInit",
+      "libnss3.so": "ATOB_AsciiToData",
+      "libsoftokn3.so": "C_GetFunctionList",
+      "libxul.so": "FTC_CMapCache_Lookup"
+    },
     "nativeLoadOrder": [
       "libmozglue.so",
       "libnss3.so",
@@ -116,44 +128,44 @@
   ],
   "artifacts": {
     "geckoview-lite-bundled-sdk35-zh-CN-arm64-release.aar": {
-      "bytes": 74396312,
-      "sha256": "76bd50970653f8d625243b4f8bd0d4354088bcb1c99dc252a6cd5a8703f85f38"
+      "bytes": 74396517,
+      "sha256": "d72f23bb4c22dcde3aeb4075605ba01d050c5370498773bc34fe4786b736ac83"
     },
     "geckoview-lite-bridge-sdk35-zh-CN-arm64-release.aar": {
-      "bytes": 1381479,
-      "sha256": "4b6f63a007fcd7ebe4647e7a4911e5a8ca57fec026e5d26b58e56f130f66b68c"
+      "bytes": 1382620,
+      "sha256": "d0720ae4e4c3ae3d3c4f90980e0bfa69f1d685b4fc0a1c96cb54d1e64810603d"
     },
     "geckoview-lite-core-arm64.zip": {
-      "bytes": 73020905,
-      "sha256": "c9943aa56d12a1bb81b5284d44cf4104aa9ef558938042c0a963df201582eef6"
+      "bytes": 73021088,
+      "sha256": "ff53732e58d0ae77e7f78372099ac8720615e538dfe6e454503c03ec9ce62785"
     },
     "geckoview-lite-installer-release.aar": {
-      "bytes": 18347,
-      "sha256": "da3ee63afb91b0328d5108ea3037eaace2dcfe12fd11b4ccd2fcdaeb4c905514"
+      "bytes": 20441,
+      "sha256": "75f7b1d01e6d998ac27076809928913cfed454b2ba941e713330ae515cf78caa"
     },
     "host-contract.json": {
-      "bytes": 1020,
-      "sha256": "ddc473bc0f28db5121cf95f8b496a39cf1dfe45d9495c65d266308775695aeb7"
+      "bytes": 1416,
+      "sha256": "68e02e984a18fc5d7d485faef1dec25b612f64eddc22e4cc785a992dc635c4df"
     },
     "local-test-public.der": {
       "bytes": 91,
       "sha256": "f5195632e0fc5ecc70f055942b077b03a54c3d3b90a4f8ea36c2e3d3aacd6087"
     },
     "external-probe-debug.apk": {
-      "bytes": 4318572,
-      "sha256": "435834dd3b8e264ba58b2cb512c9174a281f7dd2e2e166e6913d538264fc0c87"
+      "bytes": 4312592,
+      "sha256": "90e5462476244a38805dc3df47495ba93c182bc97b25e0ed83f60a2e484927c4"
     },
     "external-probe-release-unsigned.apk": {
-      "bytes": 3329105,
-      "sha256": "a014ca004668f29d650e203f353e5c9fb395d3cc915878a304fb078454dab47a"
+      "bytes": 3331257,
+      "sha256": "5b5c8532122eb370eab8bed88f77d05e90e85b7ab34bc58a14b5779de3bee693"
     },
     "bundled-probe-debug.apk": {
       "bytes": 174690645,
-      "sha256": "962da6d8d4628101712aad16c1ca8d4a13dc9dfff0e0de8dccd4afe67d4d0957"
+      "sha256": "b2cfb30065ca0889e8538aad7bd3feae5a6d7dfda526fb875afa6c532ae42edb"
     },
     "bundled-probe-release-unsigned.apk": {
       "bytes": 173698424,
-      "sha256": "c47666df7437656169b9dd23842bd62844261525ec87f52a2b5311335a3b9a9a"
+      "sha256": "2939a35536808dee8861c2c74da0168f1a29907447e900732f00acd8ce667680"
     }
   },
   "patchSha256": {
@@ -168,7 +180,7 @@
     "patches/lite-zh-CN/0003-single-locale-source-build.patch": "2a6a022c31cc7f2fc26bca1fa398ec74145fc611c6c5b839a53db93548a97447",
     "patches/no-glean-release/0001-no-glean-backend-and-release.patch": "362a8e39088e5b753f6fd730041c6f38e214dcfeda5fcc4d685b61577f6832ff",
     "patches/pdf-speech/0001-remove-pdfjs-webspeech.patch": "a67f88398fd4777c051b7c33fc2f65f7991c22d9d8855e36f35e6e73be8db640",
-    "patches/external-core/0001-external-core-fd-bootstrap.patch": "2f3ecb94e5ee31430f95816b85bb8c204d056fa6ae294a6c6e8c820bb19fb554"
+    "patches/external-core/0001-external-core-fd-bootstrap.patch": "6a15c0b10a25820a05ad45ced94591c3a8782d40513edd4c69ea8cb57b57f4fd"
   },
   "sourceReplay": {
     "patches": 12,
@@ -178,7 +190,10 @@
   },
   "tests": {
     "packageRealElfZipSignature": 3,
-    "installerRealChecks": 22,
+    "installerRealChecks": 26,
+    "durabilityFailureRecoveryAndLease": true,
+    "nativeSonameConflicts": 3,
+    "nativeExportSourceGuard": true,
     "concurrentJvmInstallers": 2,
     "noGleanShims": true,
     "releaseTrimGate": true,
@@ -244,6 +259,8 @@
   },
   "constraints": [
     "Exact build pairing only; no independent Gecko/Java upgrades",
+    "Host must serialize overlapping engine SONAME loads before prepare and throughout engine lifetime; no private linker namespace",
+    "File/directory sync and recovery tested; no physical power-cut qualification",
     "APK-configured resource FD must be free in every process (default900, range64..1023); collisions fail without overwrite",
     "One sealed memory-backed core copy per process tree increases memory/swap pressure",
     "No automatic downloader, channel URLs, upgrades, GC, health rollback or profile migration",

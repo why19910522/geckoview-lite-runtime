@@ -28,6 +28,7 @@ public final class SmokeActivity extends Activity {
                 } catch (Exception error) {
                     Log.e("GeckoExternalProbe", "PREPARE_FAILED", error);
                     recordEvidence("prepareFailure", error.toString());
+                    recordEvidence("prepareFailureCode", CoreBootstrap.failureCode(error));
                     runOnUiThread(() -> {
                         android.widget.TextView message = new android.widget.TextView(this);
                         message.setText("内核尚未就绪：" + error.getMessage());

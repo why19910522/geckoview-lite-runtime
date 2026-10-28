@@ -67,3 +67,11 @@ python3 "$RUNTIME_REPO/smoke-host/scripts/probe-rdp.py" \
 把签名 `core-package.zip` 从本机输入流导入探针自身 `files/incoming-core.zip`，以 `installCore=true` 启动一次。探针安装到自己的 no-backup 目录、删除导入副本、重复 prepare 验证幂等和 OFD 租约，再创建 Runtime；后续冷启动无需再次导入。缺包或校验失败只显示失败状态，不初始化 Gecko。此输入方式仅为本地设备验证，不构成分发服务。
 
 运行 `scripts/check-external-apk.py` 核验外置 APK：只允许小型 bootstrap SO，无 11 个 Gecko 库或 `omni.ja`。页面、RDP、PDF 的检查方法与 bundled 相同。每个实际启动的父/GPU/内容进程输出相同 packageId，isolated 子进程 UID 不同，收集日志时不可只按宿主 UID 过滤。
+
+外置探针已安装合法 core 后，可复现原生库冲突检查。脚本只操作固定的 `dev.geckolite.smoke.external`，使用明确选择的 NDK 构建三个同 SONAME、不同 build-id 的夹具，预加载后验证准备失败、selected 为空及实际预检错误。结束时停止该探针并删除自己的夹具：
+
+```sh
+python3 smoke-host/scripts/probe-native-conflicts.py \
+  --ndk "$ANDROID_NDK_ROOT" --adb "$ADB" --device "$DEVICE_ID" \
+  --output "$LOCAL_CONFLICT_RESULTS"
+```

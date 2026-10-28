@@ -71,6 +71,17 @@ public final class RuntimeTest {
     rejects("INVALID_PACKAGE",()->StrictJson.object("{\"a\":9223372036854775808}".getBytes()));
     rejects("INVALID_PACKAGE",()->CorePackages.validateInstalled(root,"../../escape",contract,keys));
     check(Files.list(root).noneMatch(p->p.getFileName().toString().startsWith(".stage-")));++tests;
+    // A valid re-import must repair an incomplete published directory.
+    Files.delete(root.resolve(id).resolve("lease"));
+    try(InputStream input=Files.newInputStream(pair.resolve("core-package.zip"))) {
+      check(CorePackages.install(root,input,contract,keys).equals(id));++tests;
+    }
+    CorePackages.validateInstalled(root,id,contract,keys);++tests;
+    Files.delete(root.resolve(id).resolve("manifest.json"));
+    try(InputStream input=Files.newInputStream(pair.resolve("core-package.zip"))) {
+      check(CorePackages.install(root,input,contract,keys).equals(id));++tests;
+    }
+    CorePackages.validateInstalled(root,id,contract,keys);++tests;
     System.out.println("PASS: "+tests+" real package/install/signature/strict JSON checks");
   }
 }

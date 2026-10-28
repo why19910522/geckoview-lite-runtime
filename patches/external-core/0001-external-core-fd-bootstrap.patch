@@ -403,7 +403,7 @@
    int64_t size = PR_Available64(fd.get());
 --- /dev/null
 +++ b/mobile/android/geckoview/src/main/java/org/mozilla/gecko/mozglue/ExternalCore.java
-@@ -0,0 +1,218 @@
+@@ -0,0 +1,230 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -432,21 +432,25 @@
 +  private final ParcelFileDescriptor container;
 +  private final String[] nativeLoadOrder;
 +  private final long[] nativeOffsets;
++  private final String[] nativeAnchors;
++  private boolean nativeSourcesVerified;
 +  // OFD lease and sealed container live for the process lifetime, across Binder dup/close.
 +  private final ParcelFileDescriptor lease;
 +  private static native int nativeReadOnly(int fd);
 +  private static native int nativeReserveFd(int fd, int slot);
-+  private static native void nativeLoad(int fd, long offset, String library);
++  private static native void nativeLoad(int fd, long offset, String library, String id, String anchor);
++  private static native void nativePreflight(String[] libraries);
 +  private static native int nativeLockLease(int fd, boolean exclusive);
 +  private static native int nativeSealed(int fd);
-+  private static native int nativeSealContainer(int fd, long size);
++  private static native int nativeSealContainer(int fd, long size, String id);
 +
 +  private ExternalCore(final String id, final ParcelFileDescriptor container,
-+      final ParcelFileDescriptor lease, final String[] order, final long[] offsets) {
++      final ParcelFileDescriptor lease, final String[] order, final long[] offsets, final String[] anchors) {
 +    this.id = id;
 +    this.container = container;
 +    this.nativeLoadOrder = order;
 +    this.nativeOffsets = offsets;
++    this.nativeAnchors = anchors;
 +    this.lease = lease;
 +  }
 +
@@ -463,7 +467,7 @@
 +    try {
 +      return new JSONObject().put("packageId", selected.id).put("pid", android.os.Process.myPid())
 +          .put("resourceFd", selected.container.getFd()).put("sealed", nativeSealed(selected.container.getFd()) == 1)
-+          .put("selectedChildren", childSelections).toString();
++          .put("nativeSourcesVerified", selected.nativeSourcesVerified).put("selectedChildren", childSelections).toString();
 +    } catch (org.json.JSONException error) { throw new IllegalStateException(error); }
 +  }
 +
@@ -508,7 +512,7 @@
 +      // Android isolated services or permitting writes to executable bytes.
 +      if (nativeSealed(owned.getFd()) != 1) {
 +        if (org.mozilla.gecko.GeckoAppShell.isIsolatedProcess()) throw new IOException("Unsealed child container");
-+        int sealed = nativeSealContainer(owned.getFd(), size);
++        int sealed = nativeSealContainer(owned.getFd(), size, id);
 +        if (sealed < 0) throw new IOException("Cannot seal core: errno=" + -sealed);
 +        owned.close();
 +        owned = ParcelFileDescriptor.adoptFd(sealed);
@@ -536,15 +540,20 @@
 +      final org.json.JSONArray nativeOrder = contract.getJSONArray("nativeLoadOrder");
 +      final String[] order = new String[nativeOrder.length()];
 +      final long[] offsets = new long[order.length];
++      final String[] anchors = new String[order.length];
++      final JSONObject exports = contract.getJSONObject("nativeAnchors");
 +      final JSONObject positions = contract.getJSONObject("nativeOffsets");
 +      if (order.length > 64) throw new IOException("Invalid native load order");
 +      for (int i = 0; i < order.length; ++i) {
 +        order[i] = nativeOrder.getString(i);
 +        offsets[i] = positions.getLong(order[i]);
++        anchors[i] = exports.getString(order[i]);
++        if (!anchors[i].matches("[A-Za-z_][A-Za-z0-9_]{0,200}")) throw new IOException("Invalid native export");
 +        if (offsets[i] < 0 || offsets[i] % 16384 != 0 || offsets[i] >= size) throw new IOException("Invalid native offset");
 +        if (!order[i].matches("lib[A-Za-z0-9_-]+\\.so")) throw new IOException("Invalid native library name");
 +      }
-+      selected = new ExternalCore(id, owned, ownedLease, order, offsets);
++      nativePreflight(order);
++      selected = new ExternalCore(id, owned, ownedLease, order, offsets, anchors);
 +      Log.i("GeckoExternalCore", "SELECTED id=" + id + " pid=" + android.os.Process.myPid()
 +          + " isolated=" + org.mozilla.gecko.GeckoAppShell.isIsolatedProcess());
 +    } catch (final Exception | LinkageError error) {
@@ -564,10 +573,13 @@
 +  }
 +
 +  static synchronized void preloadDependencies() {
-+    if (selected == null) return;
++    if (selected == null || selected.nativeSourcesVerified) return;
++    nativePreflight(selected.nativeLoadOrder);
 +    for (int i = 0; i < selected.nativeLoadOrder.length; ++i) {
-+      nativeLoad(selected.container.getFd(), selected.nativeOffsets[i], selected.nativeLoadOrder[i]);
++      nativeLoad(selected.container.getFd(), selected.nativeOffsets[i], selected.nativeLoadOrder[i],
++          selected.id, selected.nativeAnchors[i]);
 +    }
++    selected.nativeSourcesVerified = true;
 +  }
 +
 +  static synchronized Bundle childExtras(final Bundle original) {

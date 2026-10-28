@@ -7,7 +7,7 @@
 1. 使用同次构建的 bridge AAR 及签名 core-package.zip；bridge 的资产包含精确配对契约。Java、JNI 描述、Android 资源与服务仍随 APK 更新，只允许当前契约对应的核心，不能跨 Gecko 版本替换。
 2. 应用自行配置可信 P-256 公钥，并提供本地输入流。在工作线程创建 `new CoreStore(context, trustedKeys)`，调用 `install(localInputStream)`，得到受控包 ID。
 3. 在创建任何 GeckoRuntime 或预加载 Gecko 之前调用 `prepare(packageId)`。安装与准备都涉及磁盘与摘要核验，不得放在 UI 线程。准备后才能按原 GeckoView API 创建 Runtime、Session 和 View。
-4. `queryState()` 返回 ABSENT / INSTALLED / PREPARED；失败通过 `CoreException.code` 返回。`capabilityProfile()` 返回与包绑定的裁剪配置。PREPARED 只说明选择已锁定，不代表 native/页面健康检查已完成。
+4. `queryState()` 返回 ABSENT / INSTALLED / PREPARED；失败通过 `CoreException.code` 返回。`capabilityProfile()` 返回与包绑定的裁剪配置。PREPARED 相对于当前 CoreStore 实例：新实例可显示 INSTALLED，调用同包 prepare 后才显示 PREPARED；进程级选择仍不可更换。PREPARED 只说明选择已锁定，不代表 native/页面健康检查已完成。
 
 ```java
 Map<String, PublicKey> keys = Collections.singletonMap("your-key-id", trustedP256PublicKey);
@@ -23,9 +23,9 @@ try (InputStream input = callerProvidedLocalStream) {
 
 ## 安装与进程边界
 
-签名覆盖 manifest 原始 UTF-8 字节。先验签，再解析 manifest，拒绝重复 JSON 字段、越界整数、异常 ZIP 项和超限；精确比较 bridge 契约与核心/文件 SHA-256。只写应用私有 no-backup 目录，路径由 manifest 摘要生成，不按外部路径解压。临时包与有效目录分离，在安装互斥锁下原子发布；失败保留旧安装目录。没有清理已安装包的 API。
+签名覆盖 manifest 原始 UTF-8 字节。先验签，再解析 manifest，拒绝重复 JSON 字段、越界整数、异常 ZIP 项和超限；精确比较 bridge 契约与核心/文件 SHA-256。只写应用私有 no-backup 目录，路径由 manifest 摘要生成，不按外部路径解压。临时包与有效目录分离，在安装互斥锁下先同步全部文件、最终权限、lease 与 staging 目录，再原子改名并同步 root；首次创建 root 同时同步新祖先及父目录。同步错误不会报告成功。`.lease-<id>` 是固定协调 inode，安装目录内 lease 为发布完整性标记；运行期只锁定 root 下的固定协调文件，不依赖硬链接（部分 Android 策略禁止创建硬链接）；重新输入合法同包可修复缺少必需文件的目录，修复须取得独占租约，有活动租约时返回 CORE_IN_USE。有效已有安装不被覆盖；没有通用磁盘损坏修复承诺。没有清理已安装包的 API。
 
-准备时重新验证安装文件；只读 core 与 lease FD 交给 bridge。每个进程再次核对 APK 契约与容器摘要，并通过小型原生引导库持有该包的共享 OFD lease（关闭临时 dup 不会释放）；父进程只复制一次到禁止写入/扩缩容的 sealed memfd，以只读 FD 传递；子进程通过 Binder 继承固定身份和自己的 FD，不能自行选择最新版本。同进程选择不同包被拒绝。zygote 仅延后 native 预加载，保留原 isolated 服务与进程模型。
+准备时重新验证安装文件；只读 core 与 lease FD 交给 bridge。每个进程再次核对 APK 契约与容器摘要，并通过小型原生引导库持有该包的共享 OFD lease（关闭临时 dup 不会释放）；父进程只复制一次到禁止写入/扩缩容的 sealed memfd，以只读 FD 传递；子进程通过 Binder 继承固定身份和自己的 FD，不能自行选择最新版本。同进程选择不同包被拒绝。准备和首次 native 加载前，在 bootstrap 的实际 linker namespace 内预检整个非系统原生闭包；已有同名库会失败。加载使用包含 packageId 的路径名称，并通过固定导出符号的 dlsym/dladdr 来源与所选 memfd 对照。宿主必须在 prepare 前停止其他组件加载这些 SONAME，并在引擎生存期保持这一约束；预检不提供原子 linker namespace 隔离。zygote 仅延后 native 预加载，保留原 isolated 服务与进程模型。
 
 Gecko 的跨进程资源 URI 要求固定资源 FD 槽：由 bridge 契约配置 `resourceFd`（默认900，可选64–1023），必须在全部进程中空闲。冲突会失败并保留已有宿主 FD；不自动寻找另一编号或覆盖。设备不支持 OFD、memfd/seals 或相关权限时返回 `CORE_LOAD_UNSUPPORTED`，不会关闭隔离。
 
@@ -42,3 +42,5 @@ python3 runtime-external/tests/run.py \
 ```
 
 Android 集成须用对应 bridge 编译并在真机验证主进程、isolated/zygote 与实际子进程。仅通过 Java 测试不证明动态链接器或沙箱访问可用。
+
+文件与目录同步的调用顺序、故障传播和恢复已有测试；尚未进行物理断电、内核崩溃或文件系统崩溃验证。
