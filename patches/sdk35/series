@@ -1,0 +1,6 @@
+0001-sdk35-target30-platform.patch
+0002-sdk35-cursor-blink-default.patch
+0003-route-build-dependencies.patch
+0004-sdk35-accessibility-fallback.patch
+0005-optional-android-hls.patch
+0006-sdk35-core-dependency.patch

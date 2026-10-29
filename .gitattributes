@@ -1,0 +1,4 @@
+# Unified-diff blank context lines contain one space by definition.
+*.patch -whitespace
+# PDF fixtures use byte offsets and must not receive text normalization.
+*.pdf binary

@@ -1,0 +1,12 @@
+--- a/mobile/android/geckoview/build.gradle
++++ b/mobile/android/geckoview/build.gradle
+@@ -189,7 +189,8 @@
+     implementation libs.androidx.annotation
+     implementation libs.androidx.annotation.experimental
+     implementation libs.androidx.collection
+-    implementation libs.androidx.core
++    // SDK 35 baseline: newer Core AAR metadata requires API 36/37.
++    implementation "androidx.core:core:1.16.0"
+     implementation libs.androidx.lifecycle.common
+     implementation libs.androidx.lifecycle.process
+     implementation libs.play.services.fido

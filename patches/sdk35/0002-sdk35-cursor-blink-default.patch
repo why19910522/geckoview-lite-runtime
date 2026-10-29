@@ -1,0 +1,36 @@
+--- a/mobile/android/geckoview/src/main/java/org/mozilla/gecko/GeckoAppShell.java
++++ b/mobile/android/geckoview/src/main/java/org/mozilla/gecko/GeckoAppShell.java
+@@ -48,7 +48,6 @@
+ import android.view.Display;
+ import android.view.Display.HdrCapabilities;
+ import android.view.InputDevice;
+-import android.view.ViewConfiguration;
+ import android.view.WindowManager;
+ import android.view.inputmethod.InputMethodManager;
+ import android.view.inputmethod.InputMethodSubtype;
+@@ -988,7 +987,6 @@
+   }
+ 
+   private static Context sApplicationContext;
+-  private static ViewConfiguration sViewConfiguration;
+   private static Boolean sIs24HourFormat = true;
+ 
+   @WrapForJNI
+@@ -1509,14 +1507,9 @@
+ 
+   @WrapForJNI
+   private static int getTextCursorBlinkIntervalMillis() {
+-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA
+-        || Build.VERSION.SDK_INT_FULL < Build.VERSION_CODES_FULL.BAKLAVA_1) {
+-      return 500;
+-    }
+-    if (sViewConfiguration == null) {
+-      sViewConfiguration = ViewConfiguration.get(getApplicationContext());
+-    }
+-    return sViewConfiguration.getTextCursorBlinkIntervalMillis();
++    // The system cursor blink preference requires Android 36.1 APIs.
++    // Keep the existing default without linking against post-35 platform APIs.
++    return 500;
+   }
+ 
+   @WrapForJNI

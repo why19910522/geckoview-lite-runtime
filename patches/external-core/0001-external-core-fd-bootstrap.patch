@@ -1,0 +1,636 @@
+--- a/mobile/android/geckoview/src/main/java/org/mozilla/gecko/mozglue/GeckoLoader.java
++++ b/mobile/android/geckoview/src/main/java/org/mozilla/gecko/mozglue/GeckoLoader.java
+@@ -204,6 +204,8 @@
+   }
+ 
+   private static String getLibraryBase() {
++    final String external = ExternalCore.libraryBase();
++    if (external != null) return external;
+     final String mozglue = getLibraryPath("mozglue");
+     final int lastSlash = mozglue.lastIndexOf('/');
+     if (lastSlash < 0) {
+@@ -382,8 +384,55 @@
+       return;
+     }
+ 
+-    doLoadLibrary(context, "mozglue");
++    if (ExternalCore.isSelected()) {
++      ExternalCore.preloadDependencies();
++    } else {
++      if (ExternalCore.isExternalApk(context.getApplicationInfo().sourceDir)) {
++        throw new IllegalStateException("CORE_NOT_PREPARED");
++      }
++      doLoadLibrary(context, "mozglue");
++    }
+     sMozGlueLoaded = true;
++  }
++
++  /** Internal bridge bootstrap; use CoreStore to validate and install packages first. */
++  public static synchronized void prepareExternalCore(final Context context, final String packageId,
++      final android.os.ParcelFileDescriptor core, final android.os.ParcelFileDescriptor lease) {
++    if (sMozGlueLoaded && !ExternalCore.isSelected()) {
++      throw new IllegalStateException("CORE_RESTART_REQUIRED");
++    }
++    ExternalCore.prepare(context, packageId, core, lease);
++  }
++
++  /** Selection acknowledgments for diagnostics; not a native/health guarantee. */
++  public static String getExternalCoreDiagnostics() { return ExternalCore.diagnostics(); }
++
++  public static void recordExternalCoreChild(final int pid, final String type) { ExternalCore.recordChild(pid, type); }
++
++  public static String getSelectedCoreId() { return ExternalCore.selectedId(); }
++
++  public static String getResourcePath(final Context context) {
++    return ExternalCore.resourcePath(context);
++  }
++
++  public static android.os.Bundle getChildExtras(final android.os.Bundle extras) {
++    return ExternalCore.childExtras(extras);
++  }
++
++  public static void closeChildExtras(final android.os.Bundle extras) {
++    ExternalCore.closeExtras(extras);
++  }
++
++  public static void acceptExternalCore(final Context context, final android.os.Bundle extras) {
++    ExternalCore.acceptChild(context, extras);
++  }
++
++  public static String[] getChildArgs(final Context context, final String[] args) {
++    return ExternalCore.childArgs(context, args);
++  }
++
++  public static boolean isExternalApk(final String path) {
++    return ExternalCore.isExternalApk(path);
+   }
+ 
+   public static synchronized void loadGeckoLibs(final Context context) {
+--- a/mobile/android/geckoview/src/main/java/org/mozilla/gecko/GeckoThread.java
++++ b/mobile/android/geckoview/src/main/java/org/mozilla/gecko/GeckoThread.java
+@@ -338,7 +338,7 @@
+ 
+     if (!mInitInfo.xpcshell) {
+       args.add("-greomni");
+-      args.add(context.getPackageResourcePath());
++      args.add(GeckoLoader.getResourcePath(context));
+     }
+ 
+     if (mInitInfo.args != null) {
+@@ -480,6 +480,7 @@
+     // things that are happening on the JVM side.
+     maybeStartGeckoProfiler(env);
+ 
++    GeckoLoader.acceptExternalCore(context, mInitInfo.extras);
+     GeckoLoader.loadMozGlue(context);
+     setState(State.MOZGLUE_READY);
+ 
+@@ -504,7 +505,8 @@
+ 
+     Log.w(LOGTAG, "zerdatime " + SystemClock.elapsedRealtime() + " - runGecko");
+ 
+-    final String[] args = isChildProcess ? mInitInfo.args : getMainProcessArgs();
++    final String[] args = isChildProcess
++        ? GeckoLoader.getChildArgs(context, mInitInfo.args) : getMainProcessArgs();
+ 
+     if ((mInitInfo.flags & FLAG_DEBUGGING) != 0) {
+       Log.i(LOGTAG, "RunGecko - args = " + TextUtils.join(" ", args));
+--- a/mobile/android/geckoview/src/main/java/org/mozilla/gecko/process/GeckoProcessManager.java
++++ b/mobile/android/geckoview/src/main/java/org/mozilla/gecko/process/GeckoProcessManager.java
+@@ -656,8 +656,13 @@
+     /** Unconditionally create a new content connection for the specified priority. */
+     private ContentConnection getNewContentConnection(
+         @NonNull final PriorityLevel newPriority, final int childId) {
+-      final ContentConnection result =
+-          new ContentConnection(mServiceAllocator, newPriority, childId);
++      final ContentConnection result;
++      try {
++        result = new ContentConnection(mServiceAllocator, newPriority, childId);
++      } catch (final RuntimeException | LinkageError error) {
++        Log.e(LOGTAG, "Content service construction failed", error);
++        throw error;
++      }
+       mContentConnections.add(result);
+ 
+       return result;
+@@ -859,6 +864,7 @@
+   @WrapForJNI
+   private static GeckoResult<Integer> start(
+       final GeckoProcessType type, final int childId, final String[] args, final int[] fds) {
++    Log.i(LOGTAG, "Bootstrap start type=" + type);
+     final GeckoResult<Integer> result = new GeckoResult<>();
+     final StartInfo info =
+         new StartInfo(
+@@ -1016,22 +1022,35 @@
+   private GeckoResult<Integer> startInternal(final StartInfo info) {
+     XPCOMEventTarget.assertOnLauncherThread();
+ 
++    Log.i(LOGTAG, "Bootstrap connection type=" + info.type);
+     final ChildConnection connection = mConnections.getConnectionForStart(info.type, info.childId);
++    Log.i(LOGTAG, "Bootstrap bind type=" + info.type);
+     return connection
+         .bind()
+         .map(
+             child -> {
+-              final int result =
+-                  child.start(
++              final android.os.Bundle childExtras =
++                  org.mozilla.gecko.mozglue.GeckoLoader.getChildExtras(info.init.extras);
++              final int result;
++              try {
++                result = child.start(
+                       connection.createProcessManagerProxy(),
+                       mInstanceId,
+                       info.init.args,
+-                      info.init.extras,
++                      childExtras,
+                       info.init.flags,
+                       info.init.userSerialNumber,
+                       info.crashHandler,
+                       info.pfds);
++              } finally {
++                org.mozilla.gecko.mozglue.GeckoLoader.closeChildExtras(childExtras);
++              }
+               if (result == IChildProcess.STARTED_OK) {
++                final String coreId = org.mozilla.gecko.mozglue.GeckoLoader.getSelectedCoreId();
++                if (coreId != null) {
++                  org.mozilla.gecko.mozglue.GeckoLoader.recordExternalCoreChild(connection.getPid(), info.type.toString());
++                  Log.i(LOGTAG, "Child selected id=" + coreId + " pid=" + connection.getPid() + " type=" + info.type);
++                }
+                 return connection.getPid();
+               } else {
+                 throw new StartException(result, connection.getPid());
+@@ -1042,6 +1061,7 @@
+ 
+   private GeckoResult<Integer> handleBindError(
+       final ChildConnection connection, final Throwable error) {
++    Log.e(LOGTAG, "Child service binding failed", error);
+     return connection
+         .unbind()
+         .then(
+--- a/mobile/android/geckoview/src/main/java/org/mozilla/gecko/process/ZygotePreload.java
++++ b/mobile/android/geckoview/src/main/java/org/mozilla/gecko/process/ZygotePreload.java
+@@ -19,6 +19,10 @@
+   @Override
+   public void doPreload(@NonNull final ApplicationInfo applicationInfo) {
+     Log.i(LOGTAG, "doPreload");
++    if (org.mozilla.gecko.mozglue.GeckoLoader.isExternalApk(applicationInfo.sourceDir)) {
++      Log.i(LOGTAG, "External core: defer native loading until Binder selection");
++      return;
++    }
+     try {
+       System.loadLibrary("mozglue");
+       System.loadLibrary("xul");
+--- a/mobile/android/geckoview/src/main/java/org/mozilla/gecko/process/GeckoServiceChildProcess.java
++++ b/mobile/android/geckoview/src/main/java/org/mozilla/gecko/process/GeckoServiceChildProcess.java
+@@ -100,15 +100,29 @@
+           // We need to close the File Descriptors here otherwise we will leak them causing a
+           // shutdown hang.
+           closeFds(pfds);
++          org.mozilla.gecko.mozglue.GeckoLoader.closeChildExtras(extras);
+           return IChildProcess.STARTED_BUSY;
+         }
+         if (sProcessManager != null) {
+           Log.e(LOGTAG, "Child process already started");
+           closeFds(pfds);
++          org.mozilla.gecko.mozglue.GeckoLoader.closeChildExtras(extras);
+           return IChildProcess.STARTED_FAIL;
+         }
+         sProcessManager = procMan;
+         sOwnerProcessId = mainProcessId;
++      }
++
++      // Complete identity/hash/lease validation on the Binder worker before
++      // reporting STARTED_OK. GeckoThread will see the already fixed selection.
++      try {
++        org.mozilla.gecko.mozglue.GeckoLoader.acceptExternalCore(
++            GeckoAppShell.getApplicationContext(), extras);
++      } catch (final IllegalStateException | LinkageError error) {
++        Log.e(LOGTAG, "External core selection rejected", error);
++        closeFds(pfds);
++        org.mozilla.gecko.mozglue.GeckoLoader.closeChildExtras(extras);
++        return IChildProcess.STARTED_FAIL;
+       }
+ 
+       final int[] fds = new int[pfds.length];
+@@ -146,6 +160,8 @@
+ 
+               if (GeckoThread.init(info)) {
+                 GeckoThread.launch();
++              } else {
++                org.mozilla.gecko.mozglue.GeckoLoader.closeChildExtras(extras);
+               }
+             }
+           });
+--- a/mobile/android/geckoview/src/main/java/org/mozilla/gecko/process/ServiceAllocator.java
++++ b/mobile/android/geckoview/src/main/java/org/mozilla/gecko/process/ServiceAllocator.java
+@@ -523,12 +523,15 @@
+      */
+     @Override
+     public String allocate() {
++      android.util.Log.i(LOGTAG, "Isolated allocation begin");
+       if (mRunningServiceIds.size() >= MAX_NUM_ISOLATED_CONTENT_SERVICES) {
+         throw new RuntimeException("No more content services available");
+       }
+ 
+       final String newId = UUID.randomUUID().toString();
++      android.util.Log.i(LOGTAG, "Isolated UUID ready");
+       final String dashlessId = newId.replaceAll("\\-", "");
++      android.util.Log.i(LOGTAG, "Isolated instance ready");
+       mRunningServiceIds.add(dashlessId);
+       return dashlessId;
+     }
+@@ -640,7 +643,15 @@
+       @NonNull final String instanceId,
+       @NonNull final ServiceConnection conn) {
+     // We always specify the launcher thread as our Executor.
+-    return context.bindIsolatedService(
+-        intent, flags, instanceId, XPCOMEventTarget.launcherThread(), conn);
++    android.util.Log.i(LOGTAG, "Bind isolated component=" + intent.getComponent());
++    try {
++      final boolean bound = context.bindIsolatedService(
++          intent, flags, instanceId, XPCOMEventTarget.launcherThread(), conn);
++      android.util.Log.i(LOGTAG, "Bind isolated result=" + bound);
++      return bound;
++    } catch (final RuntimeException error) {
++      android.util.Log.e(LOGTAG, "Bind isolated failed", error);
++      throw error;
++    }
+   }
+ }
+--- a/toolkit/profile/nsToolkitProfileService.cpp
++++ b/toolkit/profile/nsToolkitProfileService.cpp
+@@ -30,6 +30,12 @@
+ #endif
+ #ifdef XP_UNIX
+ #  include <unistd.h>
++#endif
++#ifdef MOZ_WIDGET_ANDROID
++#  include <cerrno>
++#  include <climits>
++#  include <fcntl.h>
++#  include <sys/stat.h>
+ #endif
+ 
+ #include "CmdLineAndEnvUtils.h"
+@@ -3028,6 +3034,32 @@
+   CFRelease(fullPath);
+   return rv;
+ #elif defined(XP_UNIX)
++#  ifdef MOZ_WIDGET_ANDROID
++  // A sealed external core has no filesystem name: realpath resolves its memfd
++  // to a synthetic deleted name and fails. Preserve only a strictly numeric,
++  // read-only, fully sealed regular FD owned by this process. All normal paths
++  // retain the original canonicalization behavior.
++  constexpr char kFdPrefix[] = "/proc/self/fd/";
++  if (strncmp(aPath, kFdPrefix, sizeof(kFdPrefix) - 1) == 0) {
++    const char* number = aPath + sizeof(kFdPrefix) - 1;
++    bool digits = *number != '\0';
++    for (const char* c = number; *c; ++c) digits &= *c >= '0' && *c <= '9';
++    errno = 0;
++    char* end = nullptr;
++    long fd = strtol(number, &end, 10);
++    if (digits && !errno && *end == '\0' && fd >= 0 && fd <= INT_MAX) {
++      const int required = F_SEAL_SEAL | F_SEAL_SHRINK | F_SEAL_GROW | F_SEAL_WRITE;
++      int seals = fcntl(static_cast<int>(fd), F_GET_SEALS);
++      int flags = fcntl(static_cast<int>(fd), F_GETFL);
++      struct stat st;
++      if (seals >= 0 && (seals & required) == required && flags >= 0 &&
++          (flags & O_ACCMODE) == O_RDONLY && fstat(static_cast<int>(fd), &st) == 0 &&
++          S_ISREG(st.st_mode)) {
++        return NS_NewNativeLocalFile(nsDependentCString(aPath), aResult);
++      }
++    }
++  }
++#  endif
+   char fullPath[MAXPATHLEN];
+ 
+   if (!realpath(aPath, fullPath)) return NS_ERROR_FAILURE;
+--- a/mozglue/android/APKOpen.cpp
++++ b/mozglue/android/APKOpen.cpp
+@@ -159,6 +159,11 @@
+ }
+ 
+ static void* dlopenLibrary(const char* libraryName) {
++  if (getenv("MOZ_ANDROID_CORE_PRELOADED")) {
++    // The matched container was loaded from FD offsets by the bridge. Opening
++    // a pathname again is forbidden in isolated processes.
++    return __wrap_dlopen(libraryName, RTLD_GLOBAL | RTLD_NOW | RTLD_NOLOAD);
++  }
+   return __wrap_dlopen(getUnpackedLibraryName(libraryName).get(),
+                        RTLD_GLOBAL | RTLD_LAZY);
+ }
+@@ -191,9 +196,17 @@
+   getrusage(RUSAGE_SELF, &usage1);
+ 
+   static const char* libxul = getenv("MOZ_ANDROID_LIBDIR_OVERRIDE");
+-  gBootstrap = MOZ_TRY(
+-      GetBootstrap(libxul ? libxul : getUnpackedLibraryName("libxul.so").get(),
+-                   LibLoadingStrategy::ReadAhead));
++  if (getenv("MOZ_ANDROID_CORE_PRELOADED")) {
++    void* handle = dlopenLibrary("libxul.so");
++    auto bootstrap = handle ? reinterpret_cast<GetBootstrapType>(
++                                  __wrap_dlsym(handle, "XRE_GetBootstrap")) : nullptr;
++    if (!bootstrap) return Err(AsVariant(NS_ERROR_NOT_AVAILABLE));
++    bootstrap(gBootstrap);
++  } else {
++    gBootstrap = MOZ_TRY(
++        GetBootstrap(libxul ? libxul : getUnpackedLibraryName("libxul.so").get(),
++                     LibLoadingStrategy::ReadAhead));
++  }
+ 
+   TimeStamp t1 = TimeStamp::Now();
+   struct rusage usage2_thread, usage2;
+--- a/modules/libjar/nsZipArchive.cpp
++++ b/modules/libjar/nsZipArchive.cpp
+@@ -35,6 +35,8 @@
+ 
+ #ifdef XP_UNIX
+ #  include <sys/mman.h>
++#  include <fcntl.h>
++#  include <errno.h>
+ #  include <sys/types.h>
+ #  include <sys/stat.h>
+ #  include <limits.h>
+@@ -59,7 +61,7 @@
+ #  endif
+ #endif /* XP_UNIX */
+ 
+-#ifdef XP_WIN
++#if defined(XP_WIN) || defined(MOZ_WIDGET_ANDROID)
+ #  include "private/pprio.h"  // To get PR_ImportFile
+ #endif
+ 
+@@ -191,7 +193,38 @@
+   flags |= nsIFile::OS_READAHEAD;
+ #endif
+   LOG(("ZipHandle::Init %s", file->HumanReadablePath().get()));
+-  nsresult rv = file->OpenNSPRFileDesc(flags, 0000, getter_Transfers(fd));
++  nsresult rv = NS_ERROR_FAILURE;
++#ifdef MOZ_WIDGET_ANDROID
++  // Only fully sealed, read-only regular descriptors can bypass a pathname
++  // open. The parent already authenticated this container; the isolated child
++  // may mmap the inherited FD but SELinux deliberately forbids reopening it.
++  nsAutoCString path;
++  if (NS_SUCCEEDED(file->GetNativePath(path)) &&
++      StringBeginsWith(path, "/proc/self/fd/"_ns)) {
++    const char* number = path.get() + strlen("/proc/self/fd/");
++    bool digits = *number != '\0';
++    for (const char* c = number; *c; ++c) digits &= *c >= '0' && *c <= '9';
++    errno = 0;
++    char* end = nullptr;
++    long raw = strtol(number, &end, 10);
++    if (digits && !errno && *end == '\0' && raw >= 0 && raw <= INT_MAX) {
++      const int required = F_SEAL_SEAL | F_SEAL_SHRINK | F_SEAL_GROW | F_SEAL_WRITE;
++      int seals = fcntl(static_cast<int>(raw), F_GET_SEALS);
++      int access = fcntl(static_cast<int>(raw), F_GETFL);
++      struct stat st;
++      if (seals >= 0 && (seals & required) == required && access >= 0 &&
++          (access & O_ACCMODE) == O_RDONLY && fstat(static_cast<int>(raw), &st) == 0 &&
++          S_ISREG(st.st_mode)) {
++        int owned = fcntl(static_cast<int>(raw), F_DUPFD_CLOEXEC, 0);
++        if (owned < 0) return NS_ERROR_FAILURE;
++        fd.reset(PR_ImportFile(owned));
++        if (!fd) { close(owned); return NS_ERROR_FAILURE; }
++        rv = NS_OK;
++      }
++    }
++  }
++#endif
++  if (NS_FAILED(rv)) rv = file->OpenNSPRFileDesc(flags, 0000, getter_Transfers(fd));
+   if (NS_FAILED(rv)) return rv;
+ 
+   int64_t size = PR_Available64(fd.get());
+--- /dev/null
++++ b/mobile/android/geckoview/src/main/java/org/mozilla/gecko/mozglue/ExternalCore.java
+@@ -0,0 +1,230 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++package org.mozilla.gecko.mozglue;
++
++import android.content.Context;
++import android.os.Bundle;
++import android.os.ParcelFileDescriptor;
++import android.system.Os;
++import android.util.Log;
++import java.io.IOException;
++
++import java.security.MessageDigest;
++import java.util.zip.ZipFile;
++import org.json.JSONObject;
++
++/** Internal bootstrap transport. Public callers use the validated CoreStore API. */
++final class ExternalCore {
++  private static final String ID = "geckolite.core.id";
++  private static final String CORE = "geckolite.core.fd";
++  private static final String LEASE = "geckolite.core.lease";
++  private static final String CONTRACT = "geckolite/host-contract.json";
++  private static ExternalCore selected;
++  private static final org.json.JSONArray childSelections = new org.json.JSONArray();
++  private final String id;
++  private final ParcelFileDescriptor container;
++  private final String[] nativeLoadOrder;
++  private final long[] nativeOffsets;
++  private final String[] nativeAnchors;
++  private boolean nativeSourcesVerified;
++  // OFD lease and sealed container live for the process lifetime, across Binder dup/close.
++  private final ParcelFileDescriptor lease;
++  private static native int nativeReadOnly(int fd);
++  private static native int nativeReserveFd(int fd, int slot);
++  private static native void nativeLoad(int fd, long offset, String library, String id, String anchor);
++  private static native void nativePreflight(String[] libraries);
++  private static native int nativeLockLease(int fd, boolean exclusive);
++  private static native int nativeSealed(int fd);
++  private static native int nativeSealContainer(int fd, long size, String id);
++
++  private ExternalCore(final String id, final ParcelFileDescriptor container,
++      final ParcelFileDescriptor lease, final String[] order, final long[] offsets, final String[] anchors) {
++    this.id = id;
++    this.container = container;
++    this.nativeLoadOrder = order;
++    this.nativeOffsets = offsets;
++    this.nativeAnchors = anchors;
++    this.lease = lease;
++  }
++
++  static synchronized void recordChild(final int pid, final String type) {
++    if (selected == null) return;
++    try {
++      if (childSelections.length() >= 128) childSelections.remove(0);
++      childSelections.put(new JSONObject().put("pid", pid).put("type", type).put("packageId", selected.id));
++    } catch (org.json.JSONException error) { throw new IllegalStateException(error); }
++  }
++
++  static synchronized String diagnostics() {
++    if (selected == null) return "{}";
++    try {
++      return new JSONObject().put("packageId", selected.id).put("pid", android.os.Process.myPid())
++          .put("resourceFd", selected.container.getFd()).put("sealed", nativeSealed(selected.container.getFd()) == 1)
++          .put("nativeSourcesVerified", selected.nativeSourcesVerified).put("selectedChildren", childSelections).toString();
++    } catch (org.json.JSONException error) { throw new IllegalStateException(error); }
++  }
++
++  static synchronized String selectedId() { return selected == null ? null : selected.id; }
++
++  static synchronized boolean isSelected() { return selected != null; }
++
++  static synchronized void prepare(final Context context, final String id,
++      final ParcelFileDescriptor core, final ParcelFileDescriptor lease) {
++    if (selected != null) {
++      if (!selected.id.equals(id)) throw new IllegalStateException("CORE_RESTART_REQUIRED");
++      return;
++    }
++    ParcelFileDescriptor owned = null;
++    ParcelFileDescriptor ownedLease = null;
++    try {
++      final byte[] contractBytes;
++      try (java.io.InputStream input = context.getAssets().open(CONTRACT)) {
++        final java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
++        final byte[] buffer = new byte[4096];
++        int n;
++        while ((n = input.read(buffer)) != -1) {
++          if (bytes.size() + n > 65536) throw new IOException("Contract too large");
++          bytes.write(buffer, 0, n);
++        }
++        contractBytes = bytes.toByteArray();
++      }
++      final JSONObject contract = new JSONObject(new String(contractBytes, java.nio.charset.StandardCharsets.UTF_8));
++      if (contract.getInt("schemaVersion") != 1 || !"arm64-v8a".equals(contract.getString("abi"))
++          || !contract.getString("manifestSha256").equals(id)) {
++        throw new IOException("CORE_INCOMPATIBLE");
++      }
++      System.loadLibrary("geckolite_bootstrap");
++      if (nativeReadOnly(core.getFd()) != 1 || nativeReadOnly(lease.getFd()) != 1) {
++        throw new IOException("Read-only descriptors required");
++      }
++      owned = ParcelFileDescriptor.dup(core.getFileDescriptor());
++      final long size = Os.fstat(owned.getFileDescriptor()).st_size;
++      if (size != contract.getLong("coreSize")) throw new IOException("CORE_CORRUPT");
++      // A private file cannot be reopened by an isolated UID. A sealed memfd is
++      // copied once by the parent and inherited by all children, without changing
++      // Android isolated services or permitting writes to executable bytes.
++      if (nativeSealed(owned.getFd()) != 1) {
++        if (org.mozilla.gecko.GeckoAppShell.isIsolatedProcess()) throw new IOException("Unsealed child container");
++        int sealed = nativeSealContainer(owned.getFd(), size, id);
++        if (sealed < 0) throw new IOException("Cannot seal core: errno=" + -sealed);
++        owned.close();
++        owned = ParcelFileDescriptor.adoptFd(sealed);
++      }
++      final int stable = nativeReserveFd(owned.getFd(), contract.getInt("resourceFd"));
++      if (stable < 0) throw new IOException("Core resource FD slot unavailable: errno=" + -stable);
++      owned.close();
++      owned = ParcelFileDescriptor.adoptFd(stable);
++      // pread is public since API21 and never changes the shared Binder FD cursor.
++      final MessageDigest digest = MessageDigest.getInstance("SHA-256");
++      final byte[] bytes = new byte[65536];
++      long offset = 0;
++      while (offset < size) {
++        int n = Os.pread(owned.getFileDescriptor(), bytes, 0, (int)Math.min(bytes.length, size - offset), offset);
++        if (n <= 0) throw new IOException("Truncated core");
++        digest.update(bytes, 0, n);
++        offset += n;
++      }
++      final StringBuilder hex = new StringBuilder();
++      for (byte value : digest.digest()) hex.append(String.format(java.util.Locale.ROOT, "%02x", value & 255));
++      if (!contract.getString("coreSha256").equals(hex.toString())) throw new IOException("CORE_CORRUPT");
++      ownedLease = ParcelFileDescriptor.dup(lease.getFileDescriptor());
++      int lockError = nativeLockLease(ownedLease.getFd(), false);
++      if (lockError != 0) throw new IOException("Cannot hold core lease: errno=" + lockError);
++      final org.json.JSONArray nativeOrder = contract.getJSONArray("nativeLoadOrder");
++      final String[] order = new String[nativeOrder.length()];
++      final long[] offsets = new long[order.length];
++      final String[] anchors = new String[order.length];
++      final JSONObject exports = contract.getJSONObject("nativeAnchors");
++      final JSONObject positions = contract.getJSONObject("nativeOffsets");
++      if (order.length > 64) throw new IOException("Invalid native load order");
++      for (int i = 0; i < order.length; ++i) {
++        order[i] = nativeOrder.getString(i);
++        offsets[i] = positions.getLong(order[i]);
++        anchors[i] = exports.getString(order[i]);
++        if (!anchors[i].matches("[A-Za-z_][A-Za-z0-9_]{0,200}")) throw new IOException("Invalid native export");
++        if (offsets[i] < 0 || offsets[i] % 16384 != 0 || offsets[i] >= size) throw new IOException("Invalid native offset");
++        if (!order[i].matches("lib[A-Za-z0-9_-]+\\.so")) throw new IOException("Invalid native library name");
++      }
++      nativePreflight(order);
++      selected = new ExternalCore(id, owned, ownedLease, order, offsets, anchors);
++      Log.i("GeckoExternalCore", "SELECTED id=" + id + " pid=" + android.os.Process.myPid()
++          + " isolated=" + org.mozilla.gecko.GeckoAppShell.isIsolatedProcess());
++    } catch (final Exception | LinkageError error) {
++      try { if (ownedLease != null) ownedLease.close(); } catch (IOException ignored) { }
++      try { if (owned != null) owned.close(); } catch (IOException ignored) { }
++      throw new IllegalStateException("CORE_PREPARE_FAILED", error);
++    }
++  }
++
++  static synchronized String resourcePath(final Context context) {
++    return selected == null ? context.getPackageResourcePath() : "/proc/self/fd/" + selected.container.getFd();
++  }
++
++  static synchronized String libraryBase() {
++    if (selected == null) return null;
++    return "/proc/self/fd/" + selected.container.getFd() + "!/lib/arm64-v8a";
++  }
++
++  static synchronized void preloadDependencies() {
++    if (selected == null || selected.nativeSourcesVerified) return;
++    nativePreflight(selected.nativeLoadOrder);
++    for (int i = 0; i < selected.nativeLoadOrder.length; ++i) {
++      nativeLoad(selected.container.getFd(), selected.nativeOffsets[i], selected.nativeLoadOrder[i],
++          selected.id, selected.nativeAnchors[i]);
++    }
++    selected.nativeSourcesVerified = true;
++  }
++
++  static synchronized Bundle childExtras(final Bundle original) {
++    final Bundle result = new Bundle(original);
++    if (selected == null) return result;
++    try {
++      result.putString(ID, selected.id);
++      result.putParcelable(CORE, ParcelFileDescriptor.dup(selected.container.getFileDescriptor()));
++      result.putParcelable(LEASE, ParcelFileDescriptor.dup(selected.lease.getFileDescriptor()));
++      return result;
++    } catch (final IOException error) {
++      closeExtras(result);
++      throw new IllegalStateException("Cannot duplicate external core descriptors", error);
++    }
++  }
++
++  static void closeExtras(final Bundle extras) {
++    for (final String key : new String[] {CORE, LEASE}) {
++      final ParcelFileDescriptor pfd = extras.getParcelable(key);
++      if (pfd != null) try { pfd.close(); } catch (IOException ignored) { }
++      extras.remove(key);
++    }
++    extras.remove(ID);
++  }
++
++  static void acceptChild(final Context context, final Bundle extras) {
++    if (!extras.containsKey(ID)) return;
++    try {
++      final ParcelFileDescriptor core = extras.getParcelable(CORE);
++      final ParcelFileDescriptor lease = extras.getParcelable(LEASE);
++      if (core == null || lease == null) throw new IllegalStateException("CORE_BOOTSTRAP_MISSING");
++      prepare(context, extras.getString(ID), core, lease);
++    } finally { closeExtras(extras); }
++  }
++
++  static String[] childArgs(final Context context, final String[] original) {
++    if (!isSelected()) return original;
++    final String[] args = original.clone();
++    for (int i = 0; i + 1 < args.length; ++i) {
++      if ("-greomni".equals(args[i]) || "--greomni".equals(args[i])) {
++        args[++i] = resourcePath(context);
++      }
++    }
++    return args;
++  }
++
++  static boolean isExternalApk(final String sourceDir) {
++    try (ZipFile zip = new ZipFile(sourceDir)) {
++      return zip.getEntry("assets/" + CONTRACT) != null;
++    } catch (IOException error) {
++      throw new IllegalStateException("Cannot inspect Gecko delivery mode", error);
++    }
++  }
++}

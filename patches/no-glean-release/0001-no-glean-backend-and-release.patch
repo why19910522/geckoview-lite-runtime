@@ -1,0 +1,1365 @@
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -2385,23 +2385,7 @@
+ name = "firefox-on-glean"
+ version = "0.1.0"
+ dependencies = [
+- "bincode",
+- "chrono",
+- "gecko-profiler",
+- "glean",
+- "inherent",
+- "log",
+  "mozbuild",
+- "nserror",
+- "nsstring",
+- "once_cell",
+- "serde",
+- "serde_json",
+- "tempfile",
+- "thin-vec",
+- "uuid",
+- "wr_malloc_size_of",
+- "xpcom",
+ ]
+ 
+ [[package]]
+@@ -2558,28 +2542,6 @@
+  "firefox-on-glean",
+  "jog",
+  "nsstring",
+-]
+-
+-[[package]]
+-name = "fog_control"
+-version = "0.1.0"
+-dependencies = [
+- "bhttp",
+- "cstr",
+- "firefox-on-glean",
+- "glean",
+- "log",
+- "mozbuild",
+- "nserror",
+- "nsstring",
+- "ohttp",
+- "once_cell",
+- "static_prefs",
+- "thin-vec",
+- "thiserror 1.999.999",
+- "url",
+- "viaduct",
+- "xpcom",
+ ]
+ 
+ [[package]]
+@@ -2835,23 +2797,6 @@
+  "profiler-macros",
+  "serde",
+  "smallvec",
+-]
+-
+-[[package]]
+-name = "gecko-trace"
+-version = "0.1.0"
+-dependencies = [
+- "anyhow",
+- "cstr",
+- "firefox-on-glean",
+- "hex",
+- "log",
+- "moz_task",
+- "mozbuild",
+- "nserror",
+- "once_cell",
+- "prost",
+- "xpcom",
+ ]
+ 
+ [[package]]
+@@ -3044,10 +2989,8 @@
+  "fluent-ffi",
+  "fluent-langneg",
+  "fluent-langneg-ffi",
+- "fog_control",
+  "fontations_glue",
+  "gecko-profiler",
+- "gecko-trace",
+  "gecko_logger",
+  "gecko_tracing",
+  "geckoservo",
+@@ -3059,7 +3002,6 @@
+  "idna_glue",
+  "ipcclientcerts",
+  "ipdl_utils",
+- "jog",
+  "jsrust_shared",
+  "jxl_decoder",
+  "kvstore",
+@@ -9254,7 +9196,6 @@
+  "euclid",
+  "firefox-on-glean",
+  "gleam",
+- "glean",
+  "glslopt",
+  "http-body-util",
+  "hyper",
+@@ -9538,7 +9479,6 @@
+  "firefox-on-glean",
+  "futures-channel",
+  "futures-util",
+- "glean",
+  "log",
+  "moz_task",
+  "nsstring",
+@@ -9804,7 +9744,6 @@
+  "euclid",
+  "firefox-on-glean",
+  "freetype",
+- "glean",
+  "lazy_static",
+  "libc",
+  "log",
+--- a/docshell/base/nsAboutRedirector.cpp
++++ b/docshell/base/nsAboutRedirector.cpp
+@@ -212,7 +212,7 @@
+     {"windows-messages", "chrome://global/content/aboutWindowsMessages.html",
+      nsIAboutModule::ALLOW_SCRIPT},
+ #endif
+-#ifndef MOZ_GLEAN_ANDROID
++#if defined(MOZ_GLEAN) && !defined(MOZ_GLEAN_ANDROID)
+     {"glean", "chrome://global/content/aboutGlean.html",
+ #  if !defined(NIGHTLY_BUILD) && defined(MOZILLA_OFFICIAL)
+      nsIAboutModule::HIDE_FROM_ABOUTABOUT |
+--- a/docshell/build/components.conf
++++ b/docshell/build/components.conf
+@@ -49,7 +49,7 @@
+ if buildconfig.substs['MOZ_WIDGET_TOOLKIT'] == 'windows':
+     about_pages.append('third-party')
+     about_pages.append('windows-messages')
+-if not defined('MOZ_GLEAN_ANDROID'):
++if defined('MOZ_GLEAN') and not defined('MOZ_GLEAN_ANDROID'):
+     about_pages.append('glean')
+ if buildconfig.substs['MOZ_WIDGET_TOOLKIT'] != 'android' and buildconfig.substs['MOZ_WIDGET_TOOLKIT'] != 'windows':
+     about_pages.append('webauthn')
+--- a/gfx/wgpu_bindings/Cargo.toml
++++ b/gfx/wgpu_bindings/Cargo.toml
+@@ -96,7 +96,6 @@
+ static_prefs = { path = "../../modules/libpref/init/static_prefs" }
+ arrayvec = "0.7"
+ ash = "0.38"
+-glean = { workspace = true }
+ firefox-on-glean = { path = "../../toolkit/components/glean/api" }
+ moz_task = { path = "../../xpcom/rust/moz_task" }
+ futures-channel = "0.3"
+--- a/gfx/wr/webrender/Cargo.toml
++++ b/gfx/wr/webrender/Cargo.toml
+@@ -18,7 +18,7 @@
+ dynamic_freetype = ["glyph_rasterizer/dynamic_freetype"]
+ static_freetype = ["glyph_rasterizer/static_freetype"]
+ leak_checks = []
+-gecko = ["firefox-on-glean", "glean", "glyph_rasterizer/gecko"]
++gecko = ["firefox-on-glean", "glyph_rasterizer/gecko"]
+ sw_compositor = ["swgl"]
+ debugger = ["hyper", "hyper-util", "http-body-util", "tokio", "serde_json", "url", "sha1", "base64", "libloading", "api/debugger", "capture"]
+ 
+@@ -53,7 +53,6 @@
+ tracy-rs = "0.1.2"
+ derive_more = { version = "2", features = ["add_assign"] }
+ etagere = "0.2.13"
+-glean = { workspace = true, optional = true }
+ firefox-on-glean = { version = "0.1.0", optional = true }
+ swgl = { path = "../swgl", optional = true }
+ peek-poke = { version = "0.3", path = "../peek-poke" }
+--- a/gfx/wr/webrender/src/telemetry.rs
++++ b/gfx/wr/webrender/src/telemetry.rs
+@@ -3,7 +3,7 @@
+  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+ 
+ #[cfg(feature = "gecko")]
+-use glean::TimerId;
++use firefox_on_glean::private::TimerId;
+ #[cfg(feature = "gecko")]
+ use firefox_on_glean::metrics::wr;
+ use std::time::Duration;
+--- a/gfx/wr/wr_glyph_rasterizer/Cargo.toml
++++ b/gfx/wr/wr_glyph_rasterizer/Cargo.toml
+@@ -12,7 +12,7 @@
+ static_freetype = ["freetype/freetype-sys"]
+ capture = ["api/serialize", "serde", "smallvec/serde"]
+ replay = ["api/deserialize", "serde", "smallvec/serde"]
+-gecko = ["firefox-on-glean", "glean"]
++gecko = ["firefox-on-glean"]
+ 
+ [dependencies]
+ api = { version = "0.62.0", path = "../webrender_api", package = "webrender_api" }
+@@ -25,7 +25,6 @@
+ log = "0.4"
+ lazy_static = "1"
+ rustc-hash = "2.1.1"
+-glean = { workspace = true, optional = true }
+ firefox-on-glean = { version = "0.1.0", optional = true }
+ serde = { optional = true, version = "1.0", features = ["serde_derive"] }
+ 
+--- a/gfx/wr/wr_glyph_rasterizer/src/telemetry.rs
++++ b/gfx/wr/wr_glyph_rasterizer/src/telemetry.rs
+@@ -3,7 +3,7 @@
+  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+ 
+ #[cfg(feature = "gecko")]
+-use glean::TimerId;
++use firefox_on_glean::private::TimerId;
+ #[cfg(feature = "gecko")]
+ use firefox_on_glean::metrics::wr;
+ 
+--- a/mobile/android/geckoview/build.gradle
++++ b/mobile/android/geckoview/build.gradle
+@@ -7,6 +7,10 @@
+ 
+ import groovy.json.JsonOutput
+ import org.mozilla.conventions.WriteRuntimeDependencies
++
++if (mozconfig.substs.MOZ_GLEAN || mozconfig.substs.MOZ_GLEAN_ANDROID) {
++    throw new GradleException("The no-Glean product requires --disable-glean")
++}
+ 
+ // The SDK binding generation tasks depend on the JAR creation task of the
+ // :annotations project.
+@@ -157,39 +161,13 @@
+     }
+ 
+     publishing {
+-        singleVariant('debug')
++        singleVariant('release')
+     }
+ 
+     namespace = 'org.mozilla.geckoview'
+ }
+ 
+-def gleanVersion = libs.versions.glean.get()
+-
+-configurations {
+-    api {
+-        outgoing {
+-            if (!mozconfig.substs.MOZ_ANDROID_GECKOVIEW_LITE) {
+-                // The omni build provides glean-native
+-                capability("org.mozilla.telemetry:glean-native:${gleanVersion}")
+-            }
+-            afterEvaluate {
+-                // Implicit capability
+-                capability("org.mozilla.geckoview:${computeArtifactId()}:${gleanVersion}")
+-            }
+-        }
+-    }
+-    // TODO: This is a workaround for a bug that was fixed in Gradle 7.
+-    // The variant resolver _should_ pick the RuntimeOnly configuration when building
+-    // the tests as those define the implicit :geckoview capability but it doesn't,
+-    // so we manually define it here.
+-    runtimeOnly {
+-        outgoing {
+-            afterEvaluate {
+-                capability("org.mozilla.geckoview:geckoview:${gleanVersion}")
+-            }
+-        }
+-    }
+-}
++// No Glean capability: this product does not provide a Glean native SDK.
+ 
+ if (mozconfig.substs.MOZ_CRASHREPORTER) {
+     throw new GradleException("The no-reporter product patch requires --disable-crashreporter")
+@@ -424,10 +402,10 @@
+     }
+ }
+ 
+-// Declared in afterEvaluate so the `debug` software component (from singleVariant('debug')) exists.
++// Declared in afterEvaluate so the `release` software component (from singleVariant('release')) exists.
+ afterEvaluate {
+-    publishing.publications.create('debug', MavenPublication) {
+-        from components.debug
++    publishing.publications.create('release', MavenPublication) {
++        from components.release
+         artifactId = computeArtifactId()
+ 
+         pom {
+@@ -456,8 +434,8 @@
+         }
+ 
+         // Javadoc and sources for developer ergononomics.
+-        artifact tasks.named("javadocJarDebug")
+-        artifact tasks.named("sourcesJarDebug")
++        artifact tasks.named("javadocJarRelease")
++        artifact tasks.named("sourcesJarRelease")
+     }
+ }
+ 
+@@ -544,12 +522,11 @@
+     outputs.dir("${topobjdir}/widget/android/bindings")
+ 
+     dependsOn project(':annotations').jar
+-    dependsOn rootProject.verifyGleanVersion
+ }
+ 
+ // The published variant is the one the AAR brings into an application.
+ tasks.register("writeRuntimeDependencies", WriteRuntimeDependencies) {
+-    classpath(configurations.named("debugRuntimeClasspath"))
++    classpath(configurations.named("releaseRuntimeClasspath"))
+     outputFile = layout.buildDirectory.file("sbom/runtime-dependencies.json")
+ }
+ 
+--- a/mobile/android/geckoview/src/main/java/org/mozilla/geckoview/GeckoSession.java
++++ b/mobile/android/geckoview/src/main/java/org/mozilla/geckoview/GeckoSession.java
+@@ -3361,7 +3361,7 @@
+   }
+ 
+   /**
+-   * Send the report info via Glean when a site is reported as broken.
++   * Glean reporting is unavailable in this product. No report is collected or sent.
+    *
+    * @param details The {@link JSONObject} returned by getBrokenSiteReport.
+    * @param description the description of the issue which the user has input.
+@@ -3369,8 +3369,7 @@
+    * @param url the final URL the user has input.
+    * @param sendTabSpecificInfo whether to send tab-specific info in the report.
+    * @param sendBlockedUrls whether the user opted into sending ETP-blocked URLs in the report.
+-   * @return a {@link GeckoResult} wil complete if sending the report via Glean was successful. Will
+-   *     complete exceptionally if the report was not sent.
++   * @return a {@link GeckoResult} completed exceptionally with {@link UnsupportedOperationException}.
+    */
+   @HandlerThread
+   public @NonNull GeckoResult<Void> sendGleanBrokenSiteReport(
+@@ -3380,23 +3379,8 @@
+       @NonNull final String url,
+       @NonNull final Boolean sendTabSpecificInfo,
+       @NonNull final Boolean sendBlockedUrls) {
+-    ThreadUtils.assertOnHandlerThread();
+-    final GeckoBundle bundle = new GeckoBundle(6);
+-    if (details != null) {
+-      try {
+-        bundle.putBundle("details", GeckoBundle.fromJSONObject(details));
+-      } catch (final JSONException e) {
+-        Log.w(LOGTAG, "Failed to send broken site report details; invalid JSONObject.", e);
+-      }
+-    }
+-    if (description != null) {
+-      bundle.putString("description", description.toString());
+-    }
+-    bundle.putString("reason", reason.toString());
+-    bundle.putString("url", url.toString());
+-    bundle.putBoolean("sendTabSpecificInfo", sendTabSpecificInfo);
+-    bundle.putBoolean("sendBlockedUrls", sendBlockedUrls);
+-    return mEventDispatcher.queryVoid("GeckoView:SendGleanBrokenSiteReport", bundle);
++    return GeckoResult.fromException(
++        new UnsupportedOperationException("Glean reporting is removed from this product"));
+   }
+ 
+   /**
+--- a/mobile/android/gradle/with_gecko_binaries.gradle
++++ b/mobile/android/gradle/with_gecko_binaries.gradle
+@@ -67,7 +67,6 @@
+ 
+             dependsOn jarTask
+             dependsOn annotationProcessorsJarTask
+-            dependsOn rootProject.verifyGleanVersion
+         }
+     }
+ }
+--- a/mobile/shared/modules/geckoview/GeckoViewContent.sys.mjs
++++ b/mobile/shared/modules/geckoview/GeckoViewContent.sys.mjs
+@@ -447,19 +447,7 @@
+   }
+ 
+   async _sendGleanBrokenSiteReport(aData, aCallback) {
+-    try {
+-      const actor =
+-        this.browser.browsingContext.currentWindowGlobal.getActor(
+-          "ReportBrokenSite"
+-        );
+-
+-      actor.sendBrokenSiteReport(aData);
+-      aCallback.onSuccess();
+-    } catch (error) {
+-      aCallback.onError(
+-        `Cannot send broken site report via Glean, error: ${error}`
+-      );
+-    }
++    aCallback.onError("Glean reporting is removed from this product");
+   }
+ 
+   async _sendMoreWebCompatInfo(aData, aCallback) {
+--- a/toolkit/components/glean/api/Cargo.toml
++++ b/toolkit/components/glean/api/Cargo.toml
+@@ -7,27 +7,8 @@
+ license = "MPL-2.0"
+ 
+ [dependencies]
+-bincode = "1.0"
+-chrono = "0.4.10"
+-glean = { workspace = true }
+-
+-inherent = "1.0.0"
+-log = "0.4"
+-nsstring = { path = "../../../../xpcom/rust/nsstring", optional = true }
+-gecko-profiler = { path = "../../../../tools/profiler/rust-api", optional = true }
+-once_cell = "1.2.0"
+-serde = { version = "1.0", features = ["derive"] }
+-uuid = { version = "1.0", features = ["v4"] }
+-xpcom = { path = "../../../../xpcom/rust/xpcom", optional = true }
+-thin-vec = { version = "0.2.1", features = ["gecko-ffi"] }
+ mozbuild = "0.1"
+-serde_json = "1"
+-nserror = { path = "../../../../xpcom/rust/nserror" }
+-malloc_size_of = { path = "../../../../gfx/wr/wr_malloc_size_of", package = "wr_malloc_size_of", features = ["once_cell"] }
+-
+-[dev-dependencies]
+-tempfile = "3.1.0"
+ 
+ [features]
+-with_gecko = ["xpcom", "nsstring", "gecko-profiler"]
+-gecko_tests = ["glean/mozbuild-rustlib"]
++with_gecko = []
++gecko_tests = []
+--- a/toolkit/components/glean/api/src/lib.rs
++++ b/toolkit/components/glean/api/src/lib.rs
+@@ -2,103 +2,51 @@
+ // License, v. 2.0. If a copy of the MPL was not distributed with this
+ // file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ 
+-//! The public FOG APIs, for Rust consumers.
+-
+-// Re-exporting for later use in generated code.
+-pub extern crate chrono;
+-pub extern crate once_cell;
+-pub extern crate uuid;
+-
+-// Re-exporting for use in user tests.
+-pub use private::{DistributionData, ErrorType, RecordedEvent};
+-
+-// Must appear before `metrics` or its use of `ffi`'s macros will fail.
+-#[macro_use]
+-mod ffi;
+-
+-pub mod factory;
+-pub mod metrics;
+-pub mod pings;
+-pub mod private;
+-
+-pub mod ipc;
+-
+-#[cfg(test)]
+-mod common_test;
+-
+-#[cfg(feature = "with_gecko")]
+-use nserror::{NS_ERROR_UNEXPECTED, NS_OK};
+-#[cfg(feature = "with_gecko")]
+-use nsstring::{nsACString, nsCStr};
+-#[cfg(feature = "with_gecko")]
+-use xpcom::interfaces::{nsIHandleReportCallback, nsIMemoryReporter, nsISupports};
+-#[cfg(feature = "with_gecko")]
+-use xpcom::RefPtr;
+-
+-/// Collect a memory report for heap memory in bytes.
+-#[cfg(feature = "with_gecko")]
+-macro_rules! moz_collect_report {
+-    ($cb:ident, $path:expr, $amount:expr, $desc:expr, $data:expr) => {
+-        $cb.Callback(
+-            &nsCStr::new() as &nsACString,
+-            &nsCStr::from($path) as &nsACString,
+-            nsIMemoryReporter::KIND_HEAP,
+-            nsIMemoryReporter::UNITS_BYTES,
+-            $amount as i64,
+-            &nsCStr::from($desc) as &nsACString,
+-            $data,
+-        )
+-    };
++//! Stateless compatibility for engine instrumentation in the no-Glean product.
++//! No Glean SDK, collection, persistence, IPC, task queue or uploader is linked.
++pub mod private {
++    use std::{marker::PhantomData, time::Duration};
++    #[derive(Clone, Copy)]
++    pub struct TimerId;
++    pub struct NullMetric;
++    impl NullMetric {
++        pub fn add(&self, _: i32) {}
++        pub fn set<T>(&self, _: T) {}
++        pub fn accumulate(&self, _: u64) {}
++        pub fn accumulate_single_sample_signed(&self, _: i64) {}
++        pub fn accumulate_raw_duration(&self, _: Duration) {}
++        pub fn start(&self) -> TimerId { TimerId }
++        pub fn stop_and_accumulate(&self, _: TimerId) {}
++        pub fn cancel(&self, _: TimerId) {}
++        pub fn start_buffer(&self) -> LocalDistribution<'static> { LocalDistribution(PhantomData) }
++    }
++    pub struct NullLabeledMetric;
++    impl NullLabeledMetric {
++        pub fn get<T>(&self, _: T) -> &'static NullMetric { &NullMetric }
++    }
++    pub struct NullDualLabeledMetric;
++    impl NullDualLabeledMetric {
++        pub fn get<T,U>(&self, _: T, _: U) -> &'static NullMetric { &NullMetric }
++    }
++    pub struct NullObjectMetric<T>(pub PhantomData<T>);
++    impl<T> NullObjectMetric<T> { pub fn set(&self, _: T) {} }
++    pub struct NullEventMetric<T>(pub PhantomData<T>);
++    impl<T> NullEventMetric<T> { pub fn record(&self, _: Option<T>) {} }
++    pub struct NoExtraKeys;
++    pub struct NullPing;
++    impl NullPing { pub fn submit(&self, _: Option<&str>) {} }
++    pub struct LocalDistribution<'a>(PhantomData<&'a ()>);
++    impl LocalDistribution<'_> {
++        pub fn accumulate(&mut self, _: u64) {}
++        pub fn accumulate_single_sample(&mut self, _: u64) {}
++        pub fn accumulate_single_sample_signed(&mut self, _: i64) {}
++    }
++    pub type LocalCustomDistribution<'a> = LocalDistribution<'a>;
++    pub type LocalMemoryDistribution<'a> = LocalDistribution<'a>;
+ }
+-
+-#[cfg(feature = "with_gecko")]
+-#[no_mangle]
+-unsafe extern "C" fn fog_collect_reports(
+-    callback: *const nsIHandleReportCallback,
+-    data: *const nsISupports,
+-    _anonymize: bool,
+-) -> nserror::nsresult {
+-    let callback = match RefPtr::from_raw(callback) {
+-        Some(ptr) => ptr,
+-        None => return NS_ERROR_UNEXPECTED,
+-    };
+-
+-    extern "C" {
+-        fn fog_malloc_size_of(ptr: *const xpcom::reexports::libc::c_void) -> usize;
+-        fn fog_malloc_enclosing_size_of(ptr: *const xpcom::reexports::libc::c_void) -> usize;
+-    }
+-    let mut ops = malloc_size_of::MallocSizeOfOps::new(
+-        fog_malloc_size_of,
+-        Some(fog_malloc_enclosing_size_of),
+-    );
+-
+-    let map_size = metrics::__glean_metric_maps::fog_map_alloc_size(&mut ops);
+-    let metric_size = metrics::metric_memory_usage();
+-    let total_metric_size = map_size + metric_size;
+-    let ping_size = pings::fog_ping_alloc_size(&mut ops);
+-    let glean_size = glean::alloc_size(&mut ops);
+-
+-    moz_collect_report!(
+-        callback,
+-        "explicit/fog/metrics",
+-        total_metric_size,
+-        "Memory used by all FOG metrics",
+-        data
+-    );
+-    moz_collect_report!(
+-        callback,
+-        "explicit/fog/pings",
+-        ping_size,
+-        "Memory used by all FOG pings",
+-        data
+-    );
+-    moz_collect_report!(
+-        callback,
+-        "explicit/fog/glean",
+-        glean_size,
+-        "Memory used by the Glean object",
+-        data
+-    );
+-
+-    NS_OK
++pub mod metrics {
++    include!(mozbuild::objdir_path!("toolkit/components/glean/api/src/metrics.rs"));
+ }
++pub mod pings {
++    include!(mozbuild::objdir_path!("toolkit/components/glean/api/src/pings.rs"));
++}
+--- a/toolkit/components/glean/build_scripts/glean_parser_ext/run_glean_parser.py
++++ b/toolkit/components/glean/build_scripts/glean_parser_ext/run_glean_parser.py
+@@ -408,6 +408,10 @@
+                     )
+                     sys.exit(1)
+ 
++    from buildconfig import substs
++    if not substs.get("MOZ_GLEAN"):
++        ids_to_probes = {}
++
+     env = jinja2.Environment(
+         loader=jinja2.PackageLoader("run_glean_parser", "templates"),
+         trim_blocks=True,
+--- a/toolkit/components/glean/build_scripts/glean_parser_ext/rust.py
++++ b/toolkit/components/glean/build_scripts/glean_parser_ext/rust.py
+@@ -239,6 +239,11 @@
+     :param options: options dictionary, presently unused.
+     """
+ 
++    from buildconfig import substs
++    if not substs.get("MOZ_GLEAN"):
++        import rust_no_glean
++        return rust_no_glean.output(objs, output_fd)
++
+     # Monkeypatch util.snake_case for the templates to use
+     util.snake_case = lambda value: value.replace(".", "_").replace("-", "_")
+     # Monkeypatch util.get_jinja2_template to find templates nearby
+--- /dev/null
++++ b/toolkit/components/glean/build_scripts/glean_parser_ext/rust_no_glean.py
+@@ -0,0 +1,64 @@
++# This Source Code Form is subject to the terms of the Mozilla Public
++# License, v. 2.0. If a copy of the MPL was not distributed with this
++# file, You can obtain one at https://mozilla.org/MPL/2.0/.
++"""Generate only zero-state declarations needed by existing instrumentation."""
++from glean_parser import util
++
++def ident(value):
++    return value.replace(".", "_").replace("-", "_")
++
++def output(objs, fd):
++    def emit(s): fd.write(s + "\n")
++    def structure(name, obj):
++        typ = obj["type"]
++        if typ == "array":
++            emit(f"pub type {name} = Vec<{name}Item>;")
++            structure(name + "Item", obj["items"])
++        elif typ == "object":
++            emit("#[derive(Debug, Hash, Eq, PartialEq, Clone)]")
++            emit(f"pub struct {name} {{")
++            children = []
++            for key, val in obj["properties"].items():
++                if val["type"] in ("object", "array"):
++                    child = name + "Item" + util.Camelize(key) + ("Object" if val["type"] == "object" else "")
++                    field = f"Option<{child}>" if val["type"] == "object" else child
++                    children.append((child, val))
++                else:
++                    field = "Option<" + {"boolean":"bool", "string":"String", "number":"i64"}[val["type"]] + ">"
++                emit(f"pub r#{ident(key)}: {field},")
++            emit("}")
++            for child, val in children: structure(child, val)
++        else:
++            emit(f"pub type {name} = " + {"boolean":"bool", "string":"String", "number":"i64"}[typ] + ";")
++    emit("// No-Glean product: zero-state instrumentation compatibility only.")
++    for category, metrics in objs.items():
++        if category == "tags": continue
++        if category != "pings": emit(f"pub mod {ident(category)} {{")
++        emit("use crate::private::*;")
++        emit("use std::marker::PhantomData;")
++        for name, metric in metrics.items():
++            typ = metric.type
++            init = kind = "NullMetric"
++            if category == "pings": init = kind = "NullPing"
++            elif typ.startswith("dual_labeled_"): init = kind = "NullDualLabeledMetric"
++            elif getattr(metric, "labeled", False): init = kind = "NullLabeledMetric"
++            elif typ == "object":
++                objname = util.Camelize(metric.name) + "Object"
++                structure(objname, metric._generate_structure)
++                kind = f"NullObjectMetric<{objname}>"; init = "NullObjectMetric(PhantomData)"
++            elif typ == "event":
++                extra = getattr(metric, "extra_keys", {})
++                # Parser's typed extra-key pairs retain the upstream Rust field types.
++                typed = getattr(metric, "_generate_enums", [])
++                pairs = getattr(metric, typed[0][0]) if typed else []
++                objname = "NoExtraKeys"
++                if pairs:
++                    objname = util.Camelize(metric.name) + "Extra"
++                    emit("#[derive(Default, Debug, Clone, Hash, Eq, PartialEq)]")
++                    emit(f"pub struct {objname} {{")
++                    for key, value in pairs:
++                        emit(f"pub r#{ident(key)}: Option<" + {"boolean":"bool", "string":"String", "quantity":"u32"}[value] + ">,")
++                    emit("}")
++                kind = f"NullEventMetric<{objname}>";init = "NullEventMetric(PhantomData)"
++            emit(f"#[allow(non_upper_case_globals)] pub static {ident(name)}: {kind} = {init};")
++        if category != "pings": emit("}")
+--- a/toolkit/components/glean/ipc/FOGIPC.cpp
++++ b/toolkit/components/glean/ipc/FOGIPC.cpp
+@@ -332,6 +332,7 @@
+ #endif
+ 
+ void RecordPowerMetrics() {
++#ifdef MOZ_GLEAN
+   static uint64_t previousCpuTime = 0, previousGpuTime = 0;
+ #ifdef HAS_PROCESS_ENERGY
+   static int64_t previousProcessEnergy = 0;
+@@ -471,6 +472,7 @@
+ #endif
+ 
+   profiler_record_wakeup_count(type);
++#endif  // MOZ_GLEAN
+ }
+ 
+ /**
+--- a/toolkit/components/glean/moz.build
++++ b/toolkit/components/glean/moz.build
+@@ -33,17 +33,13 @@
+ 
+ if CONFIG["COMPILE_ENVIRONMENT"]:
+     EXPORTS.mozilla.glean += [
+-        "!fog_ffi_generated.h",
++        "no_glean/fog_ffi_generated.h",
+     ]
+ 
+     EXPORTS.mozilla.glean.bindings.jog += [
+-        "!jog_ffi_generated.h",
++        "no_glean/jog_ffi_generated.h",
+     ]
+ 
+-    CbindgenHeader("fog_ffi_generated.h", inputs=["/toolkit/components/glean"])
+-    CbindgenHeader(
+-        "jog_ffi_generated.h", inputs=["/toolkit/components/glean/bindings/jog"]
+-    )
+ 
+ UNIFIED_SOURCES += [
+     "bindings/Category.cpp",
+--- /dev/null
++++ b/toolkit/components/glean/no_glean/fog_ffi_generated.h
+@@ -0,0 +1,434 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++#ifndef mozilla_glean_fog_ffi_generated_h
++#define mozilla_glean_fog_ffi_generated_h
++
++/* Fixed Gecko d6fd7a4 ABI; stateless no-Glean product compatibility. */
++
++#include "nsError.h"
++#ifdef MOZ_GLEAN
++#error "No-Glean compatibility header requires --disable-glean"
++#endif
++
++#include <cstdarg>
++#include <cstdint>
++#include <cstdlib>
++#include <ostream>
++#include <new>
++#include "nsTArray.h"
++#include "nsString.h"
++#include "nsIMemoryReporter.h"
++
++namespace mozilla::glean::impl {
++
++struct SubmittedPing {
++  nsCString document_id;
++  nsCString ping;
++  nsCString submitted_date;
++  nsCString uploaded_date;
++  nsCString upload_failed;
++  nsCString payload;
++};
++
++struct FogAttributionMetrics {
++  nsCString source;
++  nsCString medium;
++  nsCString campaign;
++  nsCString term;
++  nsCString content;
++};
++
++struct FogDistributionMetrics {
++  nsCString name;
++};
++
++struct FogDatetime {
++  int32_t year;
++  uint32_t month;
++  uint32_t day;
++  uint32_t hour;
++  uint32_t minute;
++  uint32_t second;
++  uint32_t nano;
++  int32_t offset_seconds;
++};
++struct FfiRecordedEvent {
++  uint64_t timestamp;
++  nsCString category;
++  nsCString name;
++  nsTArray<nsCString> extras;
++};
++struct FfiDistributionData {
++  nsTArray<int64_t> keys;
++  nsTArray<int64_t> values;
++  int64_t sum;
++  int64_t count;
++};
++
++extern "C" {
++
++inline void fog_shutdown() {  }
++inline void fog_set_application_id(const char *c_app_id) {  }
++
++inline void fog_register_pings() {  }
++inline uintptr_t fog_serialize_ipc_buf() { return {}; }
++inline uintptr_t fog_give_ipc_buf(uint8_t *buf, uintptr_t buf_len) { return {}; }
++inline void fog_use_ipc_buf(const uint8_t *buf, uintptr_t buf_len) {  }
++inline nsresult fog_set_debug_view_tag(const nsACString *value) { return NS_ERROR_NOT_AVAILABLE; }
++inline nsresult fog_submit_ping(const nsACString *ping_name) { return NS_ERROR_NOT_AVAILABLE; }
++inline nsresult fog_set_log_pings(bool value) { return NS_ERROR_NOT_AVAILABLE; }
++inline nsresult fog_persist_ping_lifetime_data() { return NS_ERROR_NOT_AVAILABLE; }
++inline void fog_set_experiment_active(const nsACString *experiment_id,
++                               const nsACString *branch,
++                               const nsTArray<nsCString> *extra_keys,
++                               const nsTArray<nsCString> *extra_values) {  }
++inline void fog_set_experiment_inactive(const nsACString *experiment_id) {  }
++inline bool fog_test_is_experiment_active(const nsACString *experiment_id) { return {}; }
++inline void fog_test_get_experiment_data(const nsACString *experiment_id,
++                                  nsACString *branch,
++                                  nsTArray<nsCString> *extra_keys,
++                                  nsTArray<nsCString> *extra_values) { if (branch) branch->Truncate(); if (extra_keys) extra_keys->Clear(); if (extra_values) extra_values->Clear(); }
++inline void fog_apply_server_knobs_config(const nsACString *config_json) {  }
++inline void fog_internal_glean_handle_client_inactive() {  }
++inline bool fog_apply_serverknobs(const nsAString *serverknobs_path) { return {}; }
++
++inline void fog_set_store_submitted_pings_enabled(bool enabled) {  }
++
++inline void fog_get_all_stored_submitted_pings(nsTArray<SubmittedPing> *submitted_pings) { if (submitted_pings) submitted_pings->Clear(); }
++
++inline void fog_get_stored_submitted_pings_by_name(const nsACString *ping,
++                                            nsTArray<SubmittedPing> *submitted_pings) { if (submitted_pings) submitted_pings->Clear(); }
++
++inline void fog_clear_stored_submitted_pings() {  }
++
++inline void fog_clear_attribution() {  }
++
++inline void fog_update_attribution(const FogAttributionMetrics *attr) {  }
++
++inline void fog_test_get_attribution(FogAttributionMetrics *value) { if (value) *value = {}; }
++
++inline void fog_clear_distribution() {  }
++
++inline void fog_update_distribution(const FogDistributionMetrics *dist) {  }
++
++inline void fog_test_get_distribution(FogDistributionMetrics *value) { if (value) *value = {}; }
++inline nsresult fog_init(const nsACString *data_path_override,
++                  const nsACString *app_id_override,
++                  bool disable_internal_pings) { return NS_OK; }
++
++inline nsresult fog_test_reset(const nsACString *data_path_override, const nsACString *app_id_override) { return NS_OK; }
++inline void fog_test_shutdown() {  }
++
++extern bool FOG_TooLateToSend();
++
++inline nsresult fog_collect_reports(const nsIHandleReportCallback *callback,
++                             const nsISupports *data,
++                             bool _anonymize) { return NS_OK; }
++
++inline bool fog_boolean_test_has_value(uint32_t id, const nsACString *ping_name) { return {}; }
++
++inline bool fog_boolean_test_get_value(uint32_t id, const nsACString *ping_name) { return {}; }
++
++inline bool fog_boolean_test_get_error(uint32_t id, nsACString *error_str) { if (error_str) error_str->Truncate(); return {}; }
++
++inline void fog_boolean_set(uint32_t id, bool value) {  }
++
++inline void fog_counter_add(uint32_t id, int32_t amount) {  }
++
++inline bool fog_counter_test_has_value(uint32_t id, const nsACString *ping_name) { return {}; }
++
++inline int32_t fog_counter_test_get_value(uint32_t id, const nsACString *ping_name) { return {}; }
++
++inline bool fog_counter_test_get_error(uint32_t id, nsACString *error_str) { if (error_str) error_str->Truncate(); return {}; }
++
++inline void fog_dual_labeled_counter_add(uint32_t id, int32_t amount) {  }
++
++inline bool fog_dual_labeled_counter_test_has_value(uint32_t id, const nsACString *ping_name) { return {}; }
++
++inline int32_t fog_dual_labeled_counter_test_get_value(uint32_t id, const nsACString *ping_name) { return {}; }
++
++inline bool fog_dual_labeled_counter_test_get_error(uint32_t id, nsACString *error_str) { if (error_str) error_str->Truncate(); return {}; }
++
++inline bool fog_custom_distribution_test_has_value(uint32_t id, const nsACString *ping_name) { return {}; }
++
++inline void fog_custom_distribution_test_get_value(uint32_t id,
++                                            const nsACString *ping_name,
++                                            uint64_t *sum,
++                                            uint64_t *count,
++                                            nsTArray<uint64_t> *buckets,
++                                            nsTArray<uint64_t> *counts) { if (sum) *sum = {}; if (count) *count = {}; if (buckets) buckets->Clear(); if (counts) counts->Clear(); }
++
++inline void fog_custom_distribution_accumulate_samples(uint32_t id, const nsTArray<uint64_t> *samples) {  }
++
++inline void fog_custom_distribution_accumulate_samples_signed(uint32_t id,
++                                                       const nsTArray<int64_t> *samples) {  }
++
++inline void fog_custom_distribution_accumulate_single_sample(uint32_t id, uint64_t sample) {  }
++
++inline void fog_custom_distribution_accumulate_single_sample_signed(uint32_t id, int64_t sample) {  }
++
++inline bool fog_custom_distribution_test_get_error(uint32_t id, nsACString *error_str) { if (error_str) error_str->Truncate(); return {}; }
++
++inline bool fog_datetime_test_has_value(uint32_t id, const nsACString *ping_name) { return {}; }
++
++inline void fog_datetime_test_get_value(uint32_t id, const nsACString *ping_name, FogDatetime *value) { if (value) *value = {}; }
++
++inline void fog_datetime_set(uint32_t id, const FogDatetime *dt) {  }
++
++inline bool fog_datetime_test_get_error(uint32_t id, nsACString *error_str) { if (error_str) error_str->Truncate(); return {}; }
++
++inline void fog_denominator_add(uint32_t id, int32_t amount) {  }
++
++inline bool fog_denominator_test_has_value(uint32_t id, const nsACString *ping_name) { return {}; }
++
++inline int32_t fog_denominator_test_get_value(uint32_t id, const nsACString *ping_name) { return {}; }
++
++inline bool fog_denominator_test_get_error(uint32_t id, nsACString *error_str) { if (error_str) error_str->Truncate(); return {}; }
++
++inline void fog_event_record(uint32_t id,
++                      const nsTArray<nsCString> *extra_keys,
++                      const nsTArray<nsCString> *extra_values) {  }
++
++inline bool fog_event_test_has_value(uint32_t id, const nsACString *ping_name) { return {}; }
++
++inline bool fog_event_test_get_error(uint32_t id, nsACString *error_str) { if (error_str) error_str->Truncate(); return {}; }
++
++inline void fog_event_test_get_value(uint32_t id,
++                              const nsACString *ping_name,
++                              nsTArray<FfiRecordedEvent> *out_events) { if (out_events) out_events->Clear(); }
++
++inline void fog_labeled_enum_to_str(uint32_t id, uint16_t label, nsACString *value) { if (value) value->Truncate(); }
++
++inline uint32_t fog_labeled_boolean_get(uint32_t id, const nsACString *label) { return {}; }
++
++inline uint32_t fog_labeled_boolean_enum_get(uint32_t id, uint16_t label) { return {}; }
++
++inline void fog_labeled_boolean_test_get_value(uint32_t id,
++                                        const nsACString *ping_name,
++                                        uint64_t *count,
++                                        nsTArray<nsCString> *keys,
++                                        nsTArray<bool> *values) { if (count) *count = {}; if (keys) keys->Clear(); if (values) values->Clear(); }
++
++inline bool fog_labeled_boolean_test_get_error(uint32_t id, nsCString *error_str) { if (error_str) error_str->Truncate(); return {}; }
++
++inline uint32_t fog_labeled_counter_get(uint32_t id, const nsACString *label) { return {}; }
++
++inline uint32_t fog_labeled_counter_enum_get(uint32_t id, uint16_t label) { return {}; }
++
++inline void fog_labeled_counter_test_get_value(uint32_t id,
++                                        const nsACString *ping_name,
++                                        uint64_t *count,
++                                        nsTArray<nsCString> *keys,
++                                        nsTArray<int32_t> *values) { if (count) *count = {}; if (keys) keys->Clear(); if (values) values->Clear(); }
++
++inline bool fog_labeled_counter_test_get_error(uint32_t id, nsCString *error_str) { if (error_str) error_str->Truncate(); return {}; }
++
++inline uint32_t fog_labeled_custom_distribution_get(uint32_t id, const nsACString *label) { return {}; }
++
++inline uint32_t fog_labeled_custom_distribution_enum_get(uint32_t id, uint16_t label) { return {}; }
++
++inline void fog_labeled_custom_distribution_test_get_value(uint32_t id,
++                                                    const nsACString *ping_name,
++                                                    uint64_t *count,
++                                                    nsTArray<nsCString> *keys,
++                                                    nsTArray<FfiDistributionData> *values) { if (count) *count = {}; if (keys) keys->Clear(); if (values) values->Clear(); }
++
++inline bool fog_labeled_custom_distribution_test_get_error(uint32_t id, nsCString *error_str) { if (error_str) error_str->Truncate(); return {}; }
++
++inline uint32_t fog_labeled_memory_distribution_get(uint32_t id, const nsACString *label) { return {}; }
++
++inline uint32_t fog_labeled_memory_distribution_enum_get(uint32_t id, uint16_t label) { return {}; }
++
++inline void fog_labeled_memory_distribution_test_get_value(uint32_t id,
++                                                    const nsACString *ping_name,
++                                                    uint64_t *count,
++                                                    nsTArray<nsCString> *keys,
++                                                    nsTArray<FfiDistributionData> *values) { if (count) *count = {}; if (keys) keys->Clear(); if (values) values->Clear(); }
++
++inline bool fog_labeled_memory_distribution_test_get_error(uint32_t id, nsCString *error_str) { if (error_str) error_str->Truncate(); return {}; }
++
++inline uint32_t fog_labeled_string_get(uint32_t id, const nsACString *label) { return {}; }
++
++inline uint32_t fog_labeled_string_enum_get(uint32_t id, uint16_t label) { return {}; }
++
++inline void fog_labeled_string_test_get_value(uint32_t id,
++                                       const nsACString *ping_name,
++                                       uint64_t *count,
++                                       nsTArray<nsCString> *keys,
++                                       nsTArray<nsCString> *values) { if (count) *count = {}; if (keys) keys->Clear(); if (values) values->Clear(); }
++
++inline bool fog_labeled_string_test_get_error(uint32_t id, nsCString *error_str) { if (error_str) error_str->Truncate(); return {}; }
++
++inline uint32_t fog_labeled_timing_distribution_get(uint32_t id, const nsACString *label) { return {}; }
++
++inline uint32_t fog_labeled_timing_distribution_enum_get(uint32_t id, uint16_t label) { return {}; }
++
++inline void fog_labeled_timing_distribution_test_get_value(uint32_t id,
++                                                    const nsACString *ping_name,
++                                                    uint64_t *count,
++                                                    nsTArray<nsCString> *keys,
++                                                    nsTArray<FfiDistributionData> *values) { if (count) *count = {}; if (keys) keys->Clear(); if (values) values->Clear(); }
++
++inline bool fog_labeled_timing_distribution_test_get_error(uint32_t id, nsCString *error_str) { if (error_str) error_str->Truncate(); return {}; }
++
++inline uint32_t fog_labeled_quantity_get(uint32_t id, const nsACString *label) { return {}; }
++
++inline uint32_t fog_labeled_quantity_enum_get(uint32_t id, uint16_t label) { return {}; }
++
++inline void fog_labeled_quantity_test_get_value(uint32_t id,
++                                         const nsACString *ping_name,
++                                         uint64_t *count,
++                                         nsTArray<nsCString> *keys,
++                                         nsTArray<int64_t> *values) { if (count) *count = {}; if (keys) keys->Clear(); if (values) values->Clear(); }
++
++inline bool fog_labeled_quantity_test_get_error(uint32_t id, nsCString *error_str) { if (error_str) error_str->Truncate(); return {}; }
++
++inline uint32_t fog_dual_labeled_counter_get(uint32_t id,
++                                      const nsACString *key,
++                                      const nsACString *category) { return {}; }
++
++inline bool fog_memory_distribution_test_has_value(uint32_t id, const nsACString *ping_name) { return {}; }
++
++inline void fog_memory_distribution_test_get_value(uint32_t id,
++                                            const nsACString *ping_name,
++                                            uint64_t *sum,
++                                            uint64_t *count,
++                                            nsTArray<uint64_t> *buckets,
++                                            nsTArray<uint64_t> *counts) { if (sum) *sum = {}; if (count) *count = {}; if (buckets) buckets->Clear(); if (counts) counts->Clear(); }
++
++inline void fog_memory_distribution_accumulate(uint32_t id, uint64_t sample) {  }
++
++inline bool fog_memory_distribution_test_get_error(uint32_t id, nsACString *error_str) { if (error_str) error_str->Truncate(); return {}; }
++
++inline void fog_numerator_add_to_numerator(uint32_t id, int32_t amount) {  }
++
++inline bool fog_numerator_test_has_value(uint32_t id, const nsACString *ping_name) { return {}; }
++
++inline void fog_numerator_test_get_value(uint32_t id,
++                                  const nsACString *ping_name,
++                                  int32_t *num,
++                                  int32_t *den) { if (num) *num = {}; if (den) *den = {}; }
++
++inline bool fog_numerator_test_get_error(uint32_t id, nsACString *error_str) { if (error_str) error_str->Truncate(); return {}; }
++
++inline void fog_object_set_string(uint32_t id, const nsACString *value) {  }
++
++inline bool fog_object_test_has_value(uint32_t id, const nsACString *ping_name) { return {}; }
++
++inline void fog_object_test_get_value(uint32_t id, const nsACString *ping_name, nsACString *value) { if (value) value->Truncate(); }
++
++inline bool fog_object_test_get_error(uint32_t id, nsACString *error_str) { if (error_str) error_str->Truncate(); return {}; }
++
++inline void fog_submit_ping_by_id(uint32_t id, const nsACString *reason) {  }
++
++inline void fog_set_ping_enabled_by_id(uint32_t id, bool value) {  }
++
++inline void fog_quantity_set(uint32_t id, int64_t value) {  }
++
++inline bool fog_quantity_test_has_value(uint32_t id, const nsACString *ping_name) { return {}; }
++
++inline int64_t fog_quantity_test_get_value(uint32_t id, const nsACString *ping_name) { return {}; }
++
++inline bool fog_quantity_test_get_error(uint32_t id, nsACString *error_str) { if (error_str) error_str->Truncate(); return {}; }
++
++inline void fog_rate_add_to_numerator(uint32_t id, int32_t amount) {  }
++
++inline void fog_rate_add_to_denominator(uint32_t id, int32_t amount) {  }
++
++inline bool fog_rate_test_has_value(uint32_t id, const nsACString *ping_name) { return {}; }
++
++inline void fog_rate_test_get_value(uint32_t id, const nsACString *ping_name, int32_t *num, int32_t *den) { if (num) *num = {}; if (den) *den = {}; }
++
++inline bool fog_rate_test_get_error(uint32_t id, nsACString *error_str) { if (error_str) error_str->Truncate(); return {}; }
++
++inline bool fog_string_test_has_value(uint32_t id, const nsACString *ping_name) { return {}; }
++
++inline void fog_string_test_get_value(uint32_t id, const nsACString *ping_name, nsACString *value) { if (value) value->Truncate(); }
++
++inline void fog_string_set(uint32_t id, const nsACString *value) {  }
++
++inline bool fog_string_test_get_error(uint32_t id, nsACString *error_str) { if (error_str) error_str->Truncate(); return {}; }
++
++inline bool fog_string_list_test_has_value(uint32_t id, const nsACString *ping_name) { return {}; }
++
++inline void fog_string_list_test_get_value(uint32_t id,
++                                    const nsACString *ping_name,
++                                    nsTArray<nsCString> *value) { if (value) value->Clear(); }
++
++inline void fog_string_list_add(uint32_t id, const nsACString *value) {  }
++
++inline void fog_string_list_set(uint32_t id, const nsTArray<nsCString> *value) {  }
++
++inline bool fog_string_list_test_get_error(uint32_t id, nsACString *error_str) { if (error_str) error_str->Truncate(); return {}; }
++
++inline bool fog_text_test_has_value(uint32_t id, const nsACString *ping_name) { return {}; }
++
++inline void fog_text_test_get_value(uint32_t id, const nsACString *ping_name, nsACString *value) { if (value) value->Truncate(); }
++
++inline void fog_text_set(uint32_t id, const nsACString *value) {  }
++
++inline bool fog_text_test_get_error(uint32_t id, nsACString *error_str) { if (error_str) error_str->Truncate(); return {}; }
++
++inline void fog_timespan_start(uint32_t id) {  }
++
++inline void fog_timespan_stop(uint32_t id) {  }
++
++inline void fog_timespan_cancel(uint32_t id) {  }
++
++inline void fog_timespan_set_raw(uint32_t id, uint32_t duration) {  }
++
++inline bool fog_timespan_test_has_value(uint32_t id, const nsACString *ping_name) { return {}; }
++
++inline uint64_t fog_timespan_test_get_value(uint32_t id, const nsACString *ping_name) { return {}; }
++
++inline bool fog_timespan_test_get_error(uint32_t id, nsACString *error_str) { if (error_str) error_str->Truncate(); return {}; }
++
++inline uint64_t fog_timing_distribution_start(uint32_t id) { return {}; }
++
++inline void fog_timing_distribution_stop_and_accumulate(uint32_t id, uint64_t timing_id) {  }
++
++inline void fog_timing_distribution_accumulate_raw_nanos(uint32_t id, uint64_t sample) {  }
++
++inline void fog_timing_distribution_cancel(uint32_t id, uint64_t timing_id) {  }
++
++inline void fog_timing_distribution_accumulate_samples(uint32_t id, const nsTArray<int64_t> *samples) {  }
++
++inline void fog_timing_distribution_accumulate_single_sample(uint32_t id, int64_t sample) {  }
++
++inline bool fog_timing_distribution_test_has_value(uint32_t id, const nsACString *ping_name) { return {}; }
++
++inline void fog_timing_distribution_test_get_value(uint32_t id,
++                                            const nsACString *ping_name,
++                                            uint64_t *sum,
++                                            uint64_t *count,
++                                            nsTArray<uint64_t> *buckets,
++                                            nsTArray<uint64_t> *counts) { if (sum) *sum = {}; if (count) *count = {}; if (buckets) buckets->Clear(); if (counts) counts->Clear(); }
++
++inline bool fog_timing_distribution_test_get_error(uint32_t id, nsACString *error_str) { if (error_str) error_str->Truncate(); return {}; }
++
++inline bool fog_url_test_has_value(uint32_t id, const nsACString *ping_name) { return {}; }
++
++inline void fog_url_test_get_value(uint32_t id, const nsACString *ping_name, nsACString *value) { if (value) value->Truncate(); }
++
++inline void fog_url_set(uint32_t id, const nsACString *value) {  }
++
++inline bool fog_url_test_get_error(uint32_t id, nsACString *error_str) { if (error_str) error_str->Truncate(); return {}; }
++
++inline bool fog_uuid_test_has_value(uint32_t id, const nsACString *ping_name) { return {}; }
++
++inline void fog_uuid_test_get_value(uint32_t id, const nsACString *ping_name, nsACString *value) { if (value) value->Truncate(); }
++
++inline void fog_uuid_set(uint32_t id, const nsACString *value) {  }
++
++inline void fog_uuid_generate_and_set(uint32_t id) {  }
++
++inline bool fog_uuid_test_get_error(uint32_t id, nsACString *error_str) { if (error_str) error_str->Truncate(); return {}; }
++
++extern uintptr_t fog_malloc_size_of(const void *ptr);
++
++}  // extern "C"
++
++}  // namespace mozilla::glean::impl
++
++#endif // mozilla_glean_fog_ffi_generated_h
+--- /dev/null
++++ b/toolkit/components/glean/no_glean/jog_ffi_generated.h
+@@ -0,0 +1,69 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++#ifndef mozilla_glean_jog_ffi_generated_h
++#define mozilla_glean_jog_ffi_generated_h
++
++/* Fixed Gecko d6fd7a4 ABI; stateless no-Glean product compatibility. */
++
++#include "nsError.h"
++#ifdef MOZ_GLEAN
++#error "No-Glean compatibility header requires --disable-glean"
++#endif
++
++#include <cstdarg>
++#include <cstdint>
++#include <cstdlib>
++#include <ostream>
++#include <new>
++#include "nsTArray.h"
++#include "nsString.h"
++
++namespace mozilla::glean::jog {
++
++extern "C" {
++inline uint32_t jog_test_register_metric(const nsACString *metric_type,
++                                  const nsACString *category,
++                                  const nsACString *name,
++                                  const nsTArray<nsCString> *send_in_pings,
++                                  const nsACString *lifetime,
++                                  bool disabled,
++                                  bool in_session,
++                                  const nsACString *extra_args) { return {}; }
++inline nsresult jog_register_metric(const nsACString *metric_type,
++                             const nsACString *category,
++                             const nsACString *name,
++                             const nsTArray<nsCString> *send_in_pings,
++                             const nsACString *lifetime,
++                             bool disabled,
++                             bool in_session,
++                             const nsACString *extra_args) { return NS_ERROR_NOT_AVAILABLE; }
++inline uint32_t jog_test_register_ping(const nsACString *name,
++                                bool include_client_id,
++                                bool send_if_empty,
++                                bool precise_timestamps,
++                                bool include_info_sections,
++                                bool enabled,
++                                const nsTArray<nsCString> *schedules_pings,
++                                const nsTArray<nsCString> *reason_codes,
++                                bool follows_collection_enabled,
++                                const nsTArray<nsCString> *uploader_capabilities) { return {}; }
++inline nsresult jog_register_ping(const nsACString *name,
++                           bool include_client_id,
++                           bool send_if_empty,
++                           bool precise_timestamps,
++                           bool include_info_sections,
++                           bool enabled,
++                           const nsTArray<nsCString> *schedules_pings,
++                           const nsTArray<nsCString> *reason_codes,
++                           bool follows_collection_enabled,
++                           const nsTArray<nsCString> *uploader_capabilities) { return NS_ERROR_NOT_AVAILABLE; }
++inline void jog_test_clear_registered_metrics_and_pings() {  }
++inline bool jog_load_jogfile(const nsAString *jogfile_path) { return {}; }
++inline bool jog_load_jogfile_str(const nsCString *jogfile_contents) { return {}; }
++
++}  // extern "C"
++
++}  // namespace mozilla::glean::jog
++
++#endif // mozilla_glean_jog_ffi_generated_h
+--- a/toolkit/components/glean/xpcom/FOG.cpp
++++ b/toolkit/components/glean/xpcom/FOG.cpp
+@@ -77,6 +77,10 @@
+ 
+   gFOG = new FOG();
+   gFOG->mIsShutdown = false;
++#ifndef MOZ_GLEAN
++  ClearOnShutdown(&gFOG);
++  return do_AddRef(gFOG);
++#endif
+   gFOG->InitMemoryReporter();
+ 
+   if (XRE_IsParentProcess()) {
+@@ -152,6 +156,10 @@
+                    const nsACString& aAppIdOverride,
+                    const bool aDisableInternalPings) {
+   MOZ_ASSERT(XRE_IsParentProcess());
++#ifndef MOZ_GLEAN
++  // Keep startup callers safe without registering lifecycle callbacks or initializing a backend.
++  return NS_OK;
++#endif
+   gInitializeCalled = true;
+   if (!AppShutdown::IsInOrBeyond(ShutdownPhase::AppShutdownConfirmed)) {
+     RunOnShutdown(
+--- a/toolkit/content/jar.mn
++++ b/toolkit/content/jar.mn
+@@ -40,7 +40,7 @@
+    content/global/aboutRestricted/aboutRestricted.css (aboutRestricted/aboutRestricted.css)
+    content/global/aboutSupport.js
+ *  content/global/aboutSupport.xhtml
+-#ifndef MOZ_GLEAN_ANDROID
++#if defined(MOZ_GLEAN) && !defined(MOZ_GLEAN_ANDROID)
+    content/global/aboutGlean.js
+    content/global/aboutGlean.html
+    content/global/aboutGlean.css
+--- a/toolkit/library/rust/shared/Cargo.toml
++++ b/toolkit/library/rust/shared/Cargo.toml
+@@ -54,7 +54,6 @@
+ wgpu_bindings = { path = "../../../../gfx/wgpu_bindings" }
+ fontations_glue = { path = "../../../../gfx/fontations_glue", optional = true }
+ mapped_hyph = { git = "https://github.com/jfkthame/mapped_hyph.git", rev = "eff105f6ad7ec9b79816cfc1985a28e5340ad14b" }
+-fog_control = { path = "../../../components/glean" }
+ http_sfv = { path = "../../../../netwerk/base/http-sfv" }
+ idna_glue = { path = "../../../../netwerk/base/idna_glue" }
+ ipdl_utils = { path = "../../../../ipc/rust/ipdl_utils" }
+@@ -78,7 +77,6 @@
+ dom_push = { path = "../../../../dom/push/rust" }
+ dom_speculationrules = { path="../../../../dom/base/speculationrules" }
+ origin-trials-ffi = { path = "../../../../dom/origin-trials/ffi" }
+-jog = { path = "../../../components/glean/bindings/jog" }
+ dap_ffi = { path = "../../../components/dap/ffi" }
+ data-encoding-ffi = { path = "../../../../dom/fs/parent/rust/data-encoding-ffi" }
+ binary_http = { path = "../../../../netwerk/protocol/http/binary_http" }
+@@ -131,7 +129,6 @@
+ libz-rs-sys = { version = "0.6", features = ["custom-prefix"], optional = true }
+ zlib-rs = { version = "0.6", features = ["avx512"], optional = true }
+ 
+-gecko-trace = { path = "../../../components/gecko-trace" }
+ 
+ sitecategories = { path = "../../../components/sitecategories" }
+ 
+@@ -166,8 +163,8 @@
+ gecko_profiler_parse_elf = ["profiler_helper/parse_elf"]
+ libfuzzer = ["authrs_bridge/fuzzing"]
+ webrtc = ["mdns_service"]
+-glean_disable_upload = ["fog_control/disable_upload"]
+-glean_with_gecko = ["fog_control/with_gecko"]
++glean_disable_upload = []
++glean_with_gecko = []
+ oxidized_breakpad = ["rust_minidump_writer_linux"]
+ crashreporter = ["crash_helper_client", "mozannotation_client"]
+ with_dbus = ["audio_thread_priority/with_dbus", "xdg_alerts"]
+--- a/toolkit/library/rust/shared/lib.rs
++++ b/toolkit/library/rust/shared/lib.rs
+@@ -30,7 +30,6 @@
+ extern crate dom_push;
+ extern crate dom_speculationrules;
+ extern crate encoding_glue;
+-extern crate fog_control;
+ #[cfg(feature = "fontations")]
+ extern crate fontations_glue;
+ extern crate gecko_profiler;
+@@ -39,7 +38,6 @@
+ extern crate http_sfv;
+ extern crate idna_glue;
+ extern crate ipdl_utils;
+-extern crate jog;
+ extern crate jsrust_shared;
+ #[cfg(feature = "jxl_decoder")]
+ extern crate jxl_decoder;
+@@ -173,7 +171,6 @@
+ #[cfg(feature = "libz-rs-sys")]
+ extern crate libz_rs_sys;
+ 
+-extern crate gecko_trace;
+ 
+ extern crate log;
+ use log::info;
+--- a/toolkit/moz.configure
++++ b/toolkit/moz.configure
+@@ -3072,9 +3072,18 @@
+ # ==============================================================
+ 
+ 
+-@depends(target)
+-def glean_android(target):
+-    return target.os == "Android"
++option("--enable-glean", default=True, help="Build the Glean SDK telemetry backend")
++
++@depends("--enable-glean")
++def glean_enabled(value):
++    return bool(value)
++
++set_config("MOZ_GLEAN", glean_enabled)
++set_define("MOZ_GLEAN", True, when=glean_enabled)
++
++@depends(target, glean_enabled)
++def glean_android(target, enabled):
++    return target.os == "Android" and enabled
+ 
+ 
+ set_config("MOZ_GLEAN_ANDROID", True, when=glean_android)
+@@ -4682,12 +4691,12 @@
+ set_config(
+     "GECKO_TRACE_ENABLE",
+     True,
+-    when=moz_debug | milestone.is_nightly | moz_dev_edition,
++    when=glean_enabled & (moz_debug | milestone.is_nightly | moz_dev_edition),
+ )
+ set_define(
+     "GECKO_TRACE_ENABLE",
+     True,
+-    when=moz_debug | milestone.is_nightly | moz_dev_edition,
++    when=glean_enabled & (moz_debug | milestone.is_nightly | moz_dev_edition),
+ )
+ 
+ 
+--- a/toolkit/mozapps/installer/packager.py
++++ b/toolkit/mozapps/installer/packager.py
+@@ -230,6 +230,10 @@
+             minify_pdfjs=args.minify_pdfjs,
+             ignore_broken_symlinks=args.ignore_broken_symlinks,
+         )
++        if not defines.get("MOZ_GLEAN"):
++            # Exclude the disabled diagnostic page's Fluent resource without
++            # changing the pinned translation inputs or other toolkit locales.
++            finder_args["ignore"] = ["**/localization/*/toolkit/about/aboutGlean.ftl"]
+         finder = PackagerFileFinder(args.source, find_executables=True, **finder_args)
+         if "NO_PKG_FILES" in os.environ:
+             sinkformatter = NoPkgFilesRemover(formatter, args.manifest is not None)

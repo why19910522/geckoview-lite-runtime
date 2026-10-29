@@ -1,0 +1,28 @@
+--- a/mobile/android/gradle/mozconfig.gradle
++++ b/mobile/android/gradle/mozconfig.gradle
+@@ -305,6 +305,25 @@
+     gradle.mozconfig.substs.GRADLE_MAVEN_REPOSITORIES.each { repository ->
+         handler.maven {
+             url = repository
++            // Route platform and Mozilla coordinates to their actual repositories.
++            // A failed lookup in an unrelated repository can disable resolution.
++            def repositoryHost = new URI(repository).host
++            def googleGroups = [
++                'androidx(\\..*)?', 'com\\.android(\\..*)?',
++                'com\\.google\\.android(\\..*)?', 'com\\.google\\.firebase(\\..*)?',
++                'com\\.google\\.gms(\\..*)?', 'com\\.google\\.mlkit(\\..*)?',
++                'com\\.google\\.testing\\.platform(\\..*)?'
++            ]
++            content {
++                if (repositoryHost in ['maven.google.com', 'dl.google.com']) {
++                    googleGroups.each { includeGroupByRegex(it) }
++                } else if (repositoryHost == 'maven.mozilla.org') {
++                    includeGroupByRegex('org\\.mozilla\\..*')
++                } else if (repositoryHost in ['repo.maven.apache.org', 'repo1.maven.org']) {
++                    googleGroups.each { excludeGroupByRegex(it) }
++                    excludeGroupByRegex('org\\.mozilla\\..*')
++                }
++            }
+             if (gradle.mozconfig.substs.ALLOW_INSECURE_GRADLE_REPOSITORIES) {
+                 allowInsecureProtocol = true
+             }

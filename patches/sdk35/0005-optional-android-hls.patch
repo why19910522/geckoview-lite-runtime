@@ -1,0 +1,26 @@
+--- a/mobile/android/moz.configure
++++ b/mobile/android/moz.configure
+@@ -8,10 +8,22 @@
+     default=True,
+ )
+ 
++option(
++    "--disable-android-hls",
++    default=True,
++    help="{Enable|Disable} Android HLS support via Media3",
++)
++
++
++@depends("--disable-android-hls")
++def android_hls_enabled(value):
++    return bool(value)
++
++
+ project_flag(
+     "MOZ_ANDROID_HLS_SUPPORT",
+     help="Enable HLS (HTTP Live Streaming) support (currently using the ExoPlayer library)",
+-    default=True,
++    default=android_hls_enabled,
+ )
+ 
+ option(
